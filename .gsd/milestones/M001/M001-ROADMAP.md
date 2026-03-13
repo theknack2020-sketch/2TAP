@@ -58,7 +58,7 @@ This milestone is complete only when all are true:
 - [x] **S01: Core Game Engine** `risk:high` `depends:[]`
   > After this: Xcode project exists. Balls appear on screen with non-overlapping placement, 3-2-1 countdown plays, 2s timer bar counts down, tapping balls registers correctly, rounds cycle.
 
-- [ ] **S02: Scoring, Lives & Game Polish** `risk:medium` `depends:[S01]`
+- [x] **S02: Scoring, Lives & Game Polish** `risk:medium` `depends:[S01]`
   > After this: Score increases with combo multiplier, 3 lives with +1 bonus every 10 perfect rounds, difficulty increases (more balls), pause system works (3 uses), frame feedback (green/red flash), 3D metallic ball rendering.
 
 - [ ] **S03: Menus, Settings & Theming** `risk:medium` `depends:[S01]`

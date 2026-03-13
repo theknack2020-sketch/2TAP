@@ -274,9 +274,24 @@ class GameScene: SKScene {
         Task { @MainActor in
             state.phase = .success
             state.combo += 1
+            state.consecutivePerfect += 1
             state.bestCombo = max(state.bestCombo, state.combo)
             state.roundsSurvived += 1
-            state.score += 10 * state.combo // Basic scoring — refined in S02
+
+            // Scoring via engine
+            let points = ScoreEngine.pointsForRound(combo: state.combo)
+            state.score += points
+
+            // Bonus life every 10 perfect rounds
+            if ScoreEngine.shouldAwardBonusLife(consecutivePerfect: state.consecutivePerfect) {
+                state.lives += 1
+            }
+
+            // Difficulty — update ball count based on score
+            state.ballCount = DifficultyEngine.ballCount(forScore: state.score)
+
+            // Frame flash
+            state.flashColor = .success
         }
 
         // Brief pause, then clear balls → 2-1 countdown → next round
@@ -301,7 +316,9 @@ class GameScene: SKScene {
         Task { @MainActor in
             state.phase = .failure
             state.combo = 0
+            state.consecutivePerfect = 0
             state.lives -= 1
+            state.flashColor = .failure
 
             let livesLeft = state.lives
 

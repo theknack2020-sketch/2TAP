@@ -40,13 +40,22 @@ final class GameState {
     var timerProgress: Double = 1.0
     let timerDuration: Double = 2.0
 
-    // MARK: - Score (basic — extended in S02)
+    // MARK: - Score
 
     var score: Int = 0
     var lives: Int = 3
     var combo: Int = 0
     var roundsSurvived: Int = 0
     var bestCombo: Int = 0
+    var consecutivePerfect: Int = 0
+
+    // MARK: - Feedback
+
+    var flashColor: FlashType = .none
+
+    enum FlashType {
+        case none, success, failure
+    }
 
     // MARK: - Pause
 
@@ -88,6 +97,8 @@ final class GameState {
         combo = 0
         roundsSurvived = 0
         bestCombo = 0
+        consecutivePerfect = 0
+        flashColor = .none
         isPaused = false
         pausesRemaining = 3
         ballCount = 5
