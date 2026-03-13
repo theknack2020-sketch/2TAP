@@ -265,11 +265,13 @@ class GameScene: SKScene {
 
     // MARK: - Ball Repulsion
 
-    /// Applies soft repulsion force between all ball pairs to prevent overlap.
-    /// No collision bitmask between balls — this is the separation mechanism.
+    /// Two-layer separation: soft repulsion field + hard position correction.
+    /// Balls never touch — they repel like same-pole magnets.
     private func applyBallRepulsion() {
         let activeBalls = ballNodes.filter { !$0.isTapped }
         guard activeBalls.count > 1 else { return }
+
+        let buffer: CGFloat = 14  // minimum gap between ball edges
 
         for i in 0..<activeBalls.count {
             for j in (i + 1)..<activeBalls.count {
@@ -279,25 +281,50 @@ class GameScene: SKScene {
                 let dx = b.position.x - a.position.x
                 let dy = b.position.y - a.position.y
                 let dist = sqrt(dx * dx + dy * dy)
+                guard dist > 0.01 else { continue }
 
-                let minDist = a.radius + b.radius + 8 // 8pt buffer gap
-                guard dist < minDist && dist > 0.1 else { continue }
-
-                // Normalize direction
+                let minDist = a.radius + b.radius + buffer
                 let nx = dx / dist
                 let ny = dy / dist
 
-                // Repulsion force — stronger when closer
-                let overlap = minDist - dist
-                let force = overlap * 2.5 // smooth push
+                if dist < minDist {
+                    // HARD CORRECTION: push apart immediately so they never overlap
+                    let overlap = (minDist - dist) * 0.55 // each ball moves half
+                    a.position.x -= nx * overlap
+                    a.position.y -= ny * overlap
+                    b.position.x += nx * overlap
+                    b.position.y += ny * overlap
 
-                a.physicsBody?.applyForce(CGVector(dx: -nx * force, dy: -ny * force))
-                b.physicsBody?.applyForce(CGVector(dx:  nx * force, dy:  ny * force))
+                    // Deflect velocities apart (like a magnetic repulsion bounce)
+                    guard let bodyA = a.physicsBody, let bodyB = b.physicsBody else { continue }
+
+                    let relVx = bodyB.velocity.dx - bodyA.velocity.dx
+                    let relVy = bodyB.velocity.dy - bodyA.velocity.dy
+                    let relDotN = relVx * nx + relVy * ny
+
+                    // Only separate if they're moving toward each other
+                    if relDotN < 0 {
+                        let impulse = relDotN * 1.1 // slight extra push
+                        bodyA.velocity.dx += impulse * nx
+                        bodyA.velocity.dy += impulse * ny
+                        bodyB.velocity.dx -= impulse * nx
+                        bodyB.velocity.dy -= impulse * ny
+                    }
+                }
+
+                // SOFT FIELD: gentle push when within 2× buffer range
+                let fieldDist = a.radius + b.radius + buffer * 2.5
+                if dist < fieldDist {
+                    let strength = (fieldDist - dist) / fieldDist // 0→1 as closer
+                    let push = strength * strength * 120 // quadratic falloff
+                    a.physicsBody?.applyForce(CGVector(dx: -nx * push, dy: -ny * push))
+                    b.physicsBody?.applyForce(CGVector(dx:  nx * push, dy:  ny * push))
+                }
             }
         }
 
-        // Clamp max speed to keep it chill
-        let maxSpeed: CGFloat = 60
+        // Clamp max speed
+        let maxSpeed: CGFloat = 55
         for ball in activeBalls {
             guard let body = ball.physicsBody else { continue }
             let speed = sqrt(body.velocity.dx * body.velocity.dx + body.velocity.dy * body.velocity.dy)
