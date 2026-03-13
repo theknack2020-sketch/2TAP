@@ -32,32 +32,41 @@ class GameScene: SKScene {
     override func didMove(to view: SKView) {
         backgroundColor = .clear
         scaleMode = .resizeFill
-        setupWalls()
         physicsWorld.gravity = .zero
+        setupWalls()
+    }
+
+    override func didChangeSize(_ oldSize: CGSize) {
+        super.didChangeSize(oldSize)
+        // Rebuild walls whenever scene size changes (rotation, initial layout)
+        if size.width > 0 && size.height > 0 {
+            setupWalls()
+        }
     }
 
     /// Create wall boundaries so balls bounce off screen edges.
-    /// Top wall is lowered to keep balls out of the HUD area.
+    /// Walls are inset by the max ball radius so balls never visually clip.
     private func setupWalls() {
         childNode(withName: "walls")?.removeFromParent()
 
-        let inset: CGFloat = 4
+        // Inset walls by max possible ball radius so the ball's visual edge
+        // never extends past the screen. Max radius is 38pt (BallPlacementEngine).
+        let wallInset: CGFloat = 40
 
-        // In SpriteKit coords (y=0 at bottom), the ceiling is height - hudTopInset.
+        // In SpriteKit coords (y=0 at bottom), the ceiling sits below HUD.
         let ceilingY = size.height - hudTopInset
 
-        // Build walls as 4 separate edges (edgeLoop would use full rect)
         let walls = SKNode()
         walls.name = "walls"
 
-        let bottom = SKPhysicsBody(edgeFrom: CGPoint(x: inset, y: inset),
-                                        to: CGPoint(x: size.width - inset, y: inset))
-        let left   = SKPhysicsBody(edgeFrom: CGPoint(x: inset, y: inset),
-                                        to: CGPoint(x: inset, y: ceilingY))
-        let right  = SKPhysicsBody(edgeFrom: CGPoint(x: size.width - inset, y: inset),
-                                        to: CGPoint(x: size.width - inset, y: ceilingY))
-        let top    = SKPhysicsBody(edgeFrom: CGPoint(x: inset, y: ceilingY),
-                                        to: CGPoint(x: size.width - inset, y: ceilingY))
+        let bottom = SKPhysicsBody(edgeFrom: CGPoint(x: wallInset, y: wallInset),
+                                        to: CGPoint(x: size.width - wallInset, y: wallInset))
+        let left   = SKPhysicsBody(edgeFrom: CGPoint(x: wallInset, y: wallInset),
+                                        to: CGPoint(x: wallInset, y: ceilingY))
+        let right  = SKPhysicsBody(edgeFrom: CGPoint(x: size.width - wallInset, y: wallInset),
+                                        to: CGPoint(x: size.width - wallInset, y: ceilingY))
+        let top    = SKPhysicsBody(edgeFrom: CGPoint(x: wallInset, y: ceilingY),
+                                        to: CGPoint(x: size.width - wallInset, y: ceilingY))
 
         let compound = SKPhysicsBody(bodies: [bottom, left, right, top])
         compound.friction = 0
@@ -355,12 +364,51 @@ class GameScene: SKScene {
             }
         }()
         let maxSpeed = baseMaxSpeed * diffMultiplier
+
+        // Playable bounds — matches wall insets exactly
+        let wallInset: CGFloat = 40
+        let ceilingY = size.height - hudTopInset
+        let minX = wallInset
+        let maxX = size.width - wallInset
+        let minY = wallInset
+        let maxY = ceilingY
+
         for ball in activeBalls {
             guard let body = ball.physicsBody else { continue }
+
+            // Speed clamp
             let speed = sqrt(body.velocity.dx * body.velocity.dx + body.velocity.dy * body.velocity.dy)
             if speed > maxSpeed {
                 let scale = maxSpeed / speed
                 body.velocity = CGVector(dx: body.velocity.dx * scale, dy: body.velocity.dy * scale)
+            }
+
+            // Hard position clamp — if repulsion pushed a ball outside walls, snap it back
+            var pos = ball.position
+            var bounced = false
+
+            if pos.x < minX {
+                pos.x = minX
+                body.velocity.dx = abs(body.velocity.dx)
+                bounced = true
+            } else if pos.x > maxX {
+                pos.x = maxX
+                body.velocity.dx = -abs(body.velocity.dx)
+                bounced = true
+            }
+
+            if pos.y < minY {
+                pos.y = minY
+                body.velocity.dy = abs(body.velocity.dy)
+                bounced = true
+            } else if pos.y > maxY {
+                pos.y = maxY
+                body.velocity.dy = -abs(body.velocity.dy)
+                bounced = true
+            }
+
+            if bounced {
+                ball.position = pos
             }
         }
     }
