@@ -2,6 +2,39 @@ import Foundation
 import Observation
 import UIKit
 
+/// Difficulty mode — affects timer duration.
+enum DifficultyMode: String, CaseIterable, Identifiable {
+    case easy = "easy"
+    case normal = "normal"
+    case insane = "insane"
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .easy: return "Easy"
+        case .normal: return "Normal"
+        case .insane: return "Insane"
+        }
+    }
+
+    var timerDuration: Double {
+        switch self {
+        case .easy: return 3.0
+        case .normal: return 2.0
+        case .insane: return 1.5
+        }
+    }
+
+    var emoji: String {
+        switch self {
+        case .easy: return "🟢"
+        case .normal: return "🟡"
+        case .insane: return "🔴"
+        }
+    }
+}
+
 /// Phase of a single round.
 enum RoundPhase: Equatable {
     case idle
@@ -38,7 +71,8 @@ final class GameState {
 
     /// Progress from 1.0 (full) to 0.0 (expired). Updated by game scene.
     var timerProgress: Double = 1.0
-    let timerDuration: Double = 2.0
+    var difficultyMode: DifficultyMode = .normal
+    var timerDuration: Double { difficultyMode.timerDuration }
 
     // MARK: - Score
 

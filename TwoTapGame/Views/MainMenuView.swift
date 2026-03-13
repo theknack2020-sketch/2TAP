@@ -4,6 +4,7 @@ import SwiftUI
 struct MainMenuView: View {
     let onPlay: () -> Void
     var onSettings: (() -> Void)?
+    @Binding var selectedDifficulty: DifficultyMode
 
     @Environment(SettingsManager.self) private var settings
 
@@ -67,16 +68,30 @@ struct MainMenuView: View {
 
                 Spacer()
 
-                // High score badge
-                if settings.highScore > 0 {
-                    HStack(spacing: 8) {
-                        Image(systemName: "trophy.fill")
-                            .foregroundStyle(.yellow.opacity(0.8))
-                            .font(.system(size: 16))
+                // Stats badges
+                if settings.highScore > 0 || settings.currentStreak > 0 {
+                    HStack(spacing: 16) {
+                        if settings.highScore > 0 {
+                            HStack(spacing: 6) {
+                                Image(systemName: "trophy.fill")
+                                    .foregroundStyle(.yellow.opacity(0.8))
+                                    .font(.system(size: 14))
+                                Text("\(settings.highScore)")
+                                    .font(.system(size: 17, weight: .bold, design: .rounded))
+                                    .foregroundStyle(.white.opacity(0.6))
+                            }
+                        }
 
-                        Text("\(settings.highScore)")
-                            .font(.system(size: 20, weight: .bold, design: .rounded))
-                            .foregroundStyle(.white.opacity(0.6))
+                        if settings.currentStreak > 0 {
+                            HStack(spacing: 6) {
+                                Image(systemName: "flame.fill")
+                                    .foregroundStyle(.orange.opacity(0.8))
+                                    .font(.system(size: 14))
+                                Text("\(settings.currentStreak) day\(settings.currentStreak == 1 ? "" : "s")")
+                                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                                    .foregroundStyle(.white.opacity(0.5))
+                            }
+                        }
                     }
                     .padding(.horizontal, 20)
                     .padding(.vertical, 10)
@@ -91,6 +106,37 @@ struct MainMenuView: View {
                     .offset(y: buttonsVisible ? 0 : 15)
                     .padding(.bottom, 20)
                 }
+
+                // Difficulty selector
+                HStack(spacing: 0) {
+                    ForEach(DifficultyMode.allCases) { mode in
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.15)) {
+                                selectedDifficulty = mode
+                            }
+                        } label: {
+                            VStack(spacing: 3) {
+                                Text(mode.emoji)
+                                    .font(.system(size: 16))
+                                Text(mode.displayName)
+                                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                                    .foregroundStyle(selectedDifficulty == mode ? .white : .white.opacity(0.35))
+                                Text("\(String(format: "%.1f", mode.timerDuration))s")
+                                    .font(.system(size: 9, weight: .medium, design: .rounded))
+                                    .foregroundStyle(selectedDifficulty == mode ? .white.opacity(0.6) : .white.opacity(0.2))
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(selectedDifficulty == mode ? .white.opacity(0.1) : .clear)
+                            )
+                        }
+                    }
+                }
+                .padding(.horizontal, 40)
+                .padding(.bottom, 12)
+                .opacity(buttonsVisible ? 1 : 0)
 
                 // Play button — big, bold, central
                 Button(action: onPlay) {
@@ -277,6 +323,6 @@ struct MainMenuView: View {
 }
 
 #Preview {
-    MainMenuView(onPlay: {})
+    MainMenuView(onPlay: {}, selectedDifficulty: .constant(.normal))
         .environment(SettingsManager.shared)
 }

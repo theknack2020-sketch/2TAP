@@ -247,7 +247,57 @@ class BallNode: SKNode {
         scaleIn.timingMode = .easeOut
         let fadeIn = SKAction.fadeIn(withDuration: 0.2)
 
-        run(SKAction.sequence([wait, SKAction.group([scaleIn, fadeIn])]))
+        run(SKAction.sequence([
+            wait,
+            SKAction.group([scaleIn, fadeIn]),
+            SKAction.run { [weak self] in
+                self?.startDrift()
+                self?.startShimmer()
+            }
+        ]))
+    }
+
+    // MARK: - Zero-Gravity Drift
+
+    /// Gentle floating motion — like balls drifting in zero gravity.
+    /// Random direction, slow speed, reverses smoothly.
+    private func startDrift() {
+        let dx = CGFloat.random(in: -3...3)
+        let dy = CGFloat.random(in: -3...3)
+        let dur = Double.random(in: 2.0...3.5)
+
+        let drift = SKAction.sequence([
+            SKAction.moveBy(x: dx, y: dy, duration: dur),
+            SKAction.moveBy(x: -dx, y: -dy, duration: dur)
+        ])
+        drift.timingMode = .easeInEaseOut
+
+        run(SKAction.repeatForever(drift), withKey: "drift")
+    }
+
+    // MARK: - Specular Shimmer
+
+    /// Subtle highlight animation — the specular spot slowly shifts,
+    /// simulating light reflection on a metallic surface.
+    private func startShimmer() {
+        let dx = CGFloat.random(in: -2...2)
+        let dy = CGFloat.random(in: -1...1)
+        let dur = Double.random(in: 1.5...2.5)
+
+        let shift = SKAction.sequence([
+            SKAction.moveBy(x: dx, y: dy, duration: dur),
+            SKAction.moveBy(x: -dx, y: -dy, duration: dur)
+        ])
+        shift.timingMode = .easeInEaseOut
+
+        specularHighlight.run(SKAction.repeatForever(shift), withKey: "shimmer")
+
+        // Also pulse the highlight opacity slightly
+        let pulse = SKAction.sequence([
+            SKAction.fadeAlpha(to: 0.35, duration: dur * 0.8),
+            SKAction.fadeAlpha(to: 0.55, duration: dur * 0.8)
+        ])
+        specularHighlight.run(SKAction.repeatForever(pulse), withKey: "shimmerPulse")
     }
 
     func animateDisappear(completion: @escaping () -> Void = {}) {

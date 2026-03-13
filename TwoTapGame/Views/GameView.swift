@@ -5,6 +5,7 @@ import StoreKit
 /// Game screen — SpriteKit scene with premium SwiftUI HUD overlays.
 struct GameView: View {
     var onHome: (() -> Void)?
+    var difficultyMode: DifficultyMode = .normal
     @Environment(SettingsManager.self) private var settings
     @Environment(\.requestReview) private var requestReview
     @State var gameState = GameState()
@@ -13,6 +14,9 @@ struct GameView: View {
     @State private var gamesPlayed: Int = 0
     @State private var comboPopupText: String = ""
     @State private var showComboPopup = false
+    @State private var scorePopupText: String = ""
+    @State private var showScorePopup = false
+    @State private var scorePopupOffset: CGFloat = 0
 
     var body: some View {
         ZStack {
@@ -53,7 +57,46 @@ struct GameView: View {
                     .padding(.top, 8)
                     .opacity(isHUDVisible ? 1 : 0)
 
+                // Target color indicator
+                if gameState.phase == .playing, let matchColor = gameState.matchingColor {
+                    HStack(spacing: 8) {
+                        Text("FIND")
+                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.4))
+                            .tracking(2)
+
+                        Circle()
+                            .fill(Color(matchColor))
+                            .frame(width: 22, height: 22)
+                            .overlay(
+                                Circle().stroke(.white.opacity(0.3), lineWidth: 1.5)
+                            )
+                            .shadow(color: Color(matchColor).opacity(0.5), radius: 6)
+
+                        Text("×\(gameState.matchCount - gameState.tappedMatchCount)")
+                            .font(.system(size: 13, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.6))
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 6)
+                    .background(
+                        Capsule().fill(.white.opacity(0.06))
+                    )
+                    .padding(.top, 6)
+                    .transition(.opacity)
+                }
+
                 Spacer()
+
+                // Score popup (flying points)
+                if showScorePopup {
+                    Text(scorePopupText)
+                        .font(.system(size: 24, weight: .black, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.8))
+                        .shadow(color: .yellow.opacity(0.4), radius: 8)
+                        .offset(y: scorePopupOffset)
+                        .transition(.opacity)
+                }
 
                 // Combo popup (center screen, briefly)
                 if showComboPopup {
@@ -96,6 +139,7 @@ struct GameView: View {
 
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                 gameState.palette = settings.selectedPalette
+                gameState.difficultyMode = difficultyMode
                 gameScene?.startGame()
             }
         }
@@ -112,6 +156,12 @@ struct GameView: View {
                 showCombo(newVal)
             }
         }
+        .onChange(of: gameState.score) { oldVal, newVal in
+            let diff = newVal - oldVal
+            if diff > 0 {
+                showScorePoints(diff)
+            }
+        }
         .onChange(of: gameState.phase) { _, newPhase in
             if newPhase == .gameOver {
                 settings.updateHighScore(
@@ -119,6 +169,7 @@ struct GameView: View {
                     bestCombo: gameState.bestCombo,
                     rounds: gameState.roundsSurvived
                 )
+                settings.recordGamePlayed()
                 gamesPlayed += 1
                 if gamesPlayed == 5 && gameState.score >= 500 {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
@@ -198,6 +249,24 @@ struct GameView: View {
             }
         }
         .animation(.easeInOut(duration: 0.2), value: gameState.combo)
+    }
+
+    // MARK: - Score Popup
+
+    private func showScorePoints(_ points: Int) {
+        scorePopupText = "+\(points)"
+        scorePopupOffset = 0
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+            showScorePopup = true
+        }
+        withAnimation(.easeOut(duration: 0.8)) {
+            scorePopupOffset = -40
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+            withAnimation(.easeOut(duration: 0.2)) {
+                showScorePopup = false
+            }
+        }
     }
 
     // MARK: - Combo Popup

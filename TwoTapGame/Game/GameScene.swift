@@ -157,11 +157,17 @@ class GameScene: SKScene {
 
         let countdownSequence = SKAction.sequence([
             SKAction.run {
-                Task { @MainActor in state.phase = .countdown(number: 2) }
+                Task { @MainActor in
+                    state.phase = .countdown(number: 2)
+                    HapticManager.shared.countdownTick()
+                }
             },
             SKAction.wait(forDuration: 0.7),
             SKAction.run {
-                Task { @MainActor in state.phase = .countdown(number: 1) }
+                Task { @MainActor in
+                    state.phase = .countdown(number: 1)
+                    HapticManager.shared.countdownTick()
+                }
             },
             SKAction.wait(forDuration: 0.7),
             SKAction.run { [weak self] in
@@ -247,6 +253,7 @@ class GameScene: SKScene {
         // Tapped empty space — that's a miss
         handleRoundFailure()
         Task { @MainActor in
+            HapticManager.shared.wrongTap()
             AudioManager.shared.playWrongTap()
         }
     }
@@ -258,19 +265,21 @@ class GameScene: SKScene {
         if node.isMatch {
             node.tapCorrect()
             Task { @MainActor in
+                HapticManager.shared.correctTap()
                 AudioManager.shared.playCorrectTap()
                 state.markBallTapped(id: node.ballId)
 
                 if state.allMatchesTapped {
+                    HapticManager.shared.success()
                     AudioManager.shared.playSuccess()
                     self.handleRoundSuccess()
                 }
             }
         } else {
-            // Wrong tap — explode red, handle failure synchronously
             node.tapWrong()
             handleRoundFailure()
             Task { @MainActor in
+                HapticManager.shared.wrongTap()
                 AudioManager.shared.playWrongTap()
                 state.markBallTapped(id: node.ballId)
             }
@@ -311,6 +320,7 @@ class GameScene: SKScene {
             // Combo sound for streaks
             if state.combo > 1 {
                 AudioManager.shared.playCombo()
+                HapticManager.shared.combo()
             }
         }
 
@@ -338,6 +348,7 @@ class GameScene: SKScene {
             state.lives -= 1
             state.flashColor = .failure
             AudioManager.shared.playLifeLost()
+            HapticManager.shared.lifeLost()
 
             let livesLeft = state.lives
             let delay: TimeInterval = livesLeft <= 0 ? 1.8 : 1.5
@@ -351,6 +362,8 @@ class GameScene: SKScene {
                 self.clearBalls {
                     Task { @MainActor in
                         state.phase = .gameOver
+                        HapticManager.shared.gameOver()
+                        AudioManager.shared.playGameOver()
                     }
                 }
             } else {
