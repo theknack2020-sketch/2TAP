@@ -17,6 +17,10 @@ struct GameView: View {
     @State private var scorePopupText: String = ""
     @State private var showScorePopup = false
     @State private var scorePopupOffset: CGFloat = 0
+    @State private var gameOverCardScale: CGFloat = 0.8
+    @State private var gameOverCardOpacity: Double = 0
+    @State private var gameOverScoreAnimated: Int = 0
+    @State private var showNewBest = false
 
     var body: some View {
         ZStack {
@@ -164,12 +168,37 @@ struct GameView: View {
         }
         .onChange(of: gameState.phase) { _, newPhase in
             if newPhase == .gameOver {
+                let isNewBest = gameState.score > settings.highScore && gameState.score > 0
                 settings.updateHighScore(
                     score: gameState.score,
                     bestCombo: gameState.bestCombo,
                     rounds: gameState.roundsSurvived
                 )
                 settings.recordGamePlayed()
+                GameCenterManager.shared.submitScore(gameState.score)
+
+                // Animate game over card entrance
+                gameOverCardScale = 0.8
+                gameOverCardOpacity = 0
+                gameOverScoreAnimated = 0
+                showNewBest = false
+
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.75)) {
+                    gameOverCardScale = 1.0
+                    gameOverCardOpacity = 1.0
+                }
+                // Count up score
+                animateScoreCount(to: gameState.score)
+                // New best badge with delay
+                if isNewBest {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.5)) {
+                            showNewBest = true
+                        }
+                        HapticManager.shared.success()
+                    }
+                }
+
                 gamesPlayed += 1
                 if gamesPlayed == 5 && gameState.score >= 500 {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
@@ -266,6 +295,28 @@ struct GameView: View {
             withAnimation(.easeOut(duration: 0.2)) {
                 showScorePopup = false
             }
+        }
+    }
+
+    // MARK: - Score Count-Up
+
+    private func animateScoreCount(to target: Int) {
+        guard target > 0 else {
+            gameOverScoreAnimated = 0
+            return
+        }
+        let steps = min(target, 30) // max 30 steps
+        let perStep = max(target / steps, 1)
+        let interval = 0.6 / Double(steps) // finish in ~0.6s
+
+        for i in 1...steps {
+            DispatchQueue.main.asyncAfter(deadline: .now() + interval * Double(i)) {
+                gameOverScoreAnimated = min(perStep * i, target)
+            }
+        }
+        // Ensure final value is exact
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.65) {
+            gameOverScoreAnimated = target
         }
     }
 
@@ -368,7 +419,7 @@ struct GameView: View {
     private var gameOverOverlay: some View {
         ZStack {
             // Dimmed background
-            Color.black.opacity(0.75)
+            Color.black.opacity(0.8)
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
@@ -376,47 +427,86 @@ struct GameView: View {
 
                 // Score card
                 VStack(spacing: 20) {
+                    // Header
                     Text("GAME OVER")
-                        .font(.system(size: 16, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.4))
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.35))
                         .tracking(6)
 
-                    // Big score
-                    VStack(spacing: 4) {
-                        Text("\(gameState.score)")
-                            .font(.system(size: 56, weight: .black, design: .rounded))
+                    // Difficulty badge
+                    HStack(spacing: 5) {
+                        Text(gameState.difficultyMode.emoji)
+                            .font(.system(size: 12))
+                        Text(gameState.difficultyMode.displayName.uppercased())
+                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.4))
+                            .tracking(2)
+                    }
+
+                    // Big animated score
+                    VStack(spacing: 6) {
+                        Text("\(gameOverScoreAnimated)")
+                            .font(.system(size: 60, weight: .black, design: .rounded))
                             .foregroundStyle(.white)
                             .contentTransition(.numericText())
 
-                        if gameState.score >= settings.highScore && gameState.score > 0 {
-                            Text("NEW BEST!")
-                                .font(.system(size: 13, weight: .black, design: .rounded))
-                                .foregroundStyle(.yellow)
-                                .tracking(2)
+                        if showNewBest {
+                            HStack(spacing: 5) {
+                                Image(systemName: "crown.fill")
+                                    .font(.system(size: 11))
+                                Text("NEW BEST!")
+                                    .font(.system(size: 13, weight: .black, design: .rounded))
+                                    .tracking(2)
+                            }
+                            .foregroundStyle(.yellow)
+                            .shadow(color: .yellow.opacity(0.4), radius: 8)
+                            .transition(.scale.combined(with: .opacity))
                         }
                     }
 
-                    // Stats row
-                    HStack(spacing: 28) {
+                    // Stats grid
+                    HStack(spacing: 0) {
                         statBadge(
+                            icon: "flame.fill",
                             value: "x\(gameState.bestCombo)",
-                            label: "Best Combo",
+                            label: "Combo",
                             color: .orange
                         )
+                        statDivider
                         statBadge(
+                            icon: "circle.hexagongrid",
                             value: "\(gameState.roundsSurvived)",
                             label: "Rounds",
                             color: .cyan
                         )
+                        statDivider
                         statBadge(
+                            icon: "bolt.fill",
                             value: DifficultyEngine.levelName(forScore: gameState.score),
                             label: "Level",
                             color: .purple
                         )
                     }
+                    .padding(.vertical, 12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14)
+                            .fill(.white.opacity(0.04))
+                    )
+
+                    // Streak
+                    if settings.currentStreak > 0 {
+                        HStack(spacing: 6) {
+                            Image(systemName: "flame.fill")
+                                .foregroundStyle(.orange)
+                                .font(.system(size: 13))
+                            Text("\(settings.currentStreak) day streak")
+                                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                .foregroundStyle(.white.opacity(0.45))
+                        }
+                    }
 
                     // Buttons
-                    VStack(spacing: 12) {
+                    VStack(spacing: 10) {
                         Button {
                             gameScene?.startGame()
                         } label: {
@@ -440,6 +530,31 @@ struct GameView: View {
                             )
                         }
 
+                        // Leaderboard button
+                        if GameCenterManager.shared.isAuthenticated {
+                            Button {
+                                GameCenterManager.shared.showLeaderboard()
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "trophy.fill")
+                                        .font(.system(size: 13))
+                                    Text("Leaderboard")
+                                }
+                                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                                .foregroundStyle(.yellow.opacity(0.7))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 14)
+                                        .fill(.yellow.opacity(0.06))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 14)
+                                                .stroke(.yellow.opacity(0.1), lineWidth: 1)
+                                        )
+                                )
+                            }
+                        }
+
                         if let onHome {
                             Button {
                                 gameScene?.stopGame()
@@ -447,27 +562,30 @@ struct GameView: View {
                             } label: {
                                 HStack(spacing: 6) {
                                     Image(systemName: "house.fill")
-                                        .font(.system(size: 13))
+                                        .font(.system(size: 12))
                                     Text("Home")
                                 }
-                                .font(.system(size: 15, weight: .semibold, design: .rounded))
-                                .foregroundStyle(.white.opacity(0.5))
-                                .padding(.vertical, 10)
+                                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                                .foregroundStyle(.white.opacity(0.4))
+                                .padding(.vertical, 8)
                             }
                         }
                     }
-                    .padding(.top, 8)
+                    .padding(.top, 4)
                 }
-                .padding(32)
+                .padding(28)
                 .background(
                     RoundedRectangle(cornerRadius: 28)
                         .fill(.ultraThinMaterial)
                         .overlay(
                             RoundedRectangle(cornerRadius: 28)
-                                .stroke(.white.opacity(0.1), lineWidth: 1)
+                                .stroke(.white.opacity(0.08), lineWidth: 1)
                         )
+                        .shadow(color: .black.opacity(0.4), radius: 30, y: 10)
                 )
-                .padding(.horizontal, 28)
+                .scaleEffect(gameOverCardScale)
+                .opacity(gameOverCardOpacity)
+                .padding(.horizontal, 24)
 
                 Spacer()
             }
@@ -475,15 +593,25 @@ struct GameView: View {
         .transition(.opacity)
     }
 
-    private func statBadge(value: String, label: String, color: Color) -> some View {
-        VStack(spacing: 4) {
+    private var statDivider: some View {
+        Rectangle()
+            .fill(.white.opacity(0.08))
+            .frame(width: 1, height: 30)
+    }
+
+    private func statBadge(icon: String, value: String, label: String, color: Color) -> some View {
+        VStack(spacing: 5) {
+            Image(systemName: icon)
+                .font(.system(size: 11))
+                .foregroundStyle(color.opacity(0.6))
             Text(value)
-                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .font(.system(size: 18, weight: .bold, design: .rounded))
                 .foregroundStyle(color)
             Text(label)
-                .font(.system(size: 10, weight: .medium, design: .rounded))
-                .foregroundStyle(.white.opacity(0.4))
+                .font(.system(size: 9, weight: .medium, design: .rounded))
+                .foregroundStyle(.white.opacity(0.35))
         }
+        .frame(maxWidth: .infinity)
     }
 }
 

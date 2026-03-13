@@ -170,21 +170,40 @@ struct MainMenuView: View {
                 .opacity(buttonsVisible ? 1 : 0)
                 .offset(y: buttonsVisible ? 0 : 20)
 
-                // Settings
-                Button {
-                    onSettings?()
-                } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: "gearshape.fill")
-                            .font(.system(size: 14))
-                        Text("Settings")
-                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                // Secondary buttons
+                HStack(spacing: 24) {
+                    // Settings
+                    Button {
+                        onSettings?()
+                    } label: {
+                        VStack(spacing: 4) {
+                            Image(systemName: "gearshape.fill")
+                                .font(.system(size: 18))
+                            Text("Settings")
+                                .font(.system(size: 10, weight: .medium, design: .rounded))
+                        }
+                        .foregroundStyle(.white.opacity(0.35))
+                        .frame(width: 70)
                     }
-                    .foregroundStyle(.white.opacity(0.4))
-                    .padding(.vertical, 14)
+
+                    // Leaderboard
+                    if GameCenterManager.shared.isAuthenticated {
+                        Button {
+                            GameCenterManager.shared.showLeaderboard()
+                        } label: {
+                            VStack(spacing: 4) {
+                                Image(systemName: "trophy.fill")
+                                    .font(.system(size: 18))
+                                Text("Ranks")
+                                    .font(.system(size: 10, weight: .medium, design: .rounded))
+                            }
+                            .foregroundStyle(.yellow.opacity(0.5))
+                            .frame(width: 70)
+                        }
+                    }
                 }
                 .opacity(buttonsVisible ? 1 : 0)
-                .padding(.top, 8)
+                .padding(.top, 10)
 
                 Spacer()
                     .frame(height: 60)
