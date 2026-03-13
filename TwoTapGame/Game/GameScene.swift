@@ -31,26 +31,27 @@ class GameScene: SKScene {
     func startGame() {
         guard let state = gameState else { return }
 
+        // Cancel any pending actions
+        removeAction(forKey: "countdown")
+        removeAction(forKey: "nextRound")
+        timerActive = false
+
+        // Clear any leftover balls
+        clearBallsImmediate()
+
         Task { @MainActor in
             state.reset()
-            state.phase = .countdown(number: 3)
         }
 
-        runCountdown()
+        // 2-1 countdown (2TAP = 2 seconds identity)
+        runCountdown(isFirstRound: true)
     }
 
-    /// Start the next round (no countdown between rounds).
+    /// Start the next round with 2-1 countdown between rounds.
     func startNextRound() {
-        guard let state = gameState else { return }
-
-        // Clear existing balls
-        clearBalls {
-            self.spawnBalls()
-            self.startTimer()
-        }
-
-        Task { @MainActor in
-            state.roundNumber += 1
+        // Clear existing balls first, then countdown, then spawn
+        clearBalls { [weak self] in
+            self?.runCountdown(isFirstRound: false)
         }
     }
 
@@ -69,7 +70,6 @@ class GameScene: SKScene {
             ballRadius: ballRadius,
             screenSize: screenSize
         ) else {
-            // Placement failed — this shouldn't happen with reasonable ball counts
             print("⚠️ Ball placement failed for \(state.ballCount) balls on \(screenSize)")
             return
         }
@@ -135,35 +135,45 @@ class GameScene: SKScene {
         }
     }
 
-    // MARK: - Countdown
+    /// Clear all ball nodes immediately (no animation).
+    private func clearBallsImmediate() {
+        for node in ballNodes {
+            node.removeFromParent()
+        }
+        ballNodes.removeAll()
+    }
 
-    private func runCountdown() {
+    // MARK: - Countdown (2-1, not 3-2-1)
+
+    /// Runs 2→1 countdown, then spawns balls and starts timer.
+    /// - Parameter isFirstRound: if true, increments roundNumber to 1
+    private func runCountdown(isFirstRound: Bool) {
         guard let state = gameState else { return }
 
         let countdownSequence = SKAction.sequence([
-            // "3"
-            SKAction.run {
-                Task { @MainActor in state.phase = .countdown(number: 3) }
-            },
-            SKAction.wait(forDuration: 0.8),
             // "2"
             SKAction.run {
                 Task { @MainActor in state.phase = .countdown(number: 2) }
             },
-            SKAction.wait(forDuration: 0.8),
+            SKAction.wait(forDuration: 0.7),
             // "1"
             SKAction.run {
                 Task { @MainActor in state.phase = .countdown(number: 1) }
             },
-            SKAction.wait(forDuration: 0.8),
+            SKAction.wait(forDuration: 0.7),
             // Start playing
             SKAction.run { [weak self] in
+                guard let self = self, let state = self.gameState else { return }
                 Task { @MainActor in
+                    if isFirstRound {
+                        state.roundNumber = 1
+                    } else {
+                        state.roundNumber += 1
+                    }
                     state.phase = .playing
-                    state.roundNumber = 1
                 }
-                self?.spawnBalls()
-                self?.startTimer()
+                self.spawnBalls()
+                self.startTimer()
             }
         ])
 
@@ -269,15 +279,13 @@ class GameScene: SKScene {
             state.score += 10 * state.combo // Basic scoring — refined in S02
         }
 
-        // Brief pause then next round
+        // Brief pause, then clear balls → 2-1 countdown → next round
         let nextAction = SKAction.sequence([
-            SKAction.wait(forDuration: 0.5),
+            SKAction.wait(forDuration: 0.4),
             SKAction.run { [weak self] in
                 guard let self = self, let state = self.gameState else { return }
                 Task { @MainActor in
-                    if state.lives > 0 {
-                        state.phase = .playing
-                    }
+                    guard state.lives > 0 else { return }
                 }
                 self.startNextRound()
             }
@@ -295,22 +303,25 @@ class GameScene: SKScene {
             state.lives -= 1
 
             if state.lives <= 0 {
-                state.phase = .gameOver
+                // Game over — clear balls immediately
+                self.clearBalls {
+                    Task { @MainActor in
+                        state.phase = .gameOver
+                    }
+                }
+                return
             }
         }
 
-        // Brief pause then next round (or game over)
+        // Brief pause, then clear balls → 2-1 countdown → next round
         let nextAction = SKAction.sequence([
-            SKAction.wait(forDuration: 0.8),
+            SKAction.wait(forDuration: 0.6),
             SKAction.run { [weak self] in
                 guard let self = self, let state = self.gameState else { return }
                 Task { @MainActor in
-                    if state.lives > 0 {
-                        state.phase = .playing
-                        self.startNextRound()
-                    }
-                    // If game over, SwiftUI handles the overlay
+                    guard state.lives > 0 else { return }
                 }
+                self.startNextRound()
             }
         ])
         run(nextAction, withKey: "nextRound")
@@ -335,5 +346,14 @@ class GameScene: SKScene {
                 self.isPaused = true
             }
         }
+    }
+
+    // MARK: - Cleanup
+
+    func stopGame() {
+        removeAction(forKey: "countdown")
+        removeAction(forKey: "nextRound")
+        timerActive = false
+        clearBallsImmediate()
     }
 }

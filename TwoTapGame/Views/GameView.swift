@@ -6,17 +6,8 @@ import SpriteKit
 /// Hosts the game scene via SpriteView and overlays SwiftUI HUD elements
 /// (timer bar, countdown, pause button).
 struct GameView: View {
+    var onHome: (() -> Void)?
     @State var gameState = GameState()
-
-    private var scene: GameScene {
-        let scene = GameScene()
-        scene.size = UIScreen.main.bounds.size
-        scene.scaleMode = .resizeFill
-        scene.backgroundColor = .clear
-        scene.gameState = gameState
-        return scene
-    }
-
     @State private var gameScene: GameScene?
 
     var body: some View {
@@ -52,6 +43,13 @@ struct GameView: View {
 
                     Spacer()
 
+                    // Round number
+                    Text("Round \(gameState.roundNumber)")
+                        .font(.system(size: 14, weight: .medium, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.5))
+
+                    Spacer()
+
                     // Lives
                     HStack(spacing: 4) {
                         ForEach(0..<3, id: \.self) { index in
@@ -63,13 +61,13 @@ struct GameView: View {
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 8)
-                .opacity(gameState.phase == .playing || gameState.phase == .success || gameState.phase == .failure ? 1 : 0)
+                .opacity(isHUDVisible ? 1 : 0)
             }
 
             // Countdown overlay
             CountdownView(phase: gameState.phase)
 
-            // Game Over overlay (basic — refined in S04)
+            // Game Over overlay
             if gameState.phase == .gameOver {
                 gameOverOverlay
             }
@@ -82,10 +80,21 @@ struct GameView: View {
             newScene.gameState = gameState
             gameScene = newScene
 
-            // Start the game after a brief delay
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                 gameScene?.startGame()
             }
+        }
+        .onDisappear {
+            gameScene?.stopGame()
+        }
+    }
+
+    private var isHUDVisible: Bool {
+        switch gameState.phase {
+        case .playing, .success, .failure, .countdown:
+            return true
+        default:
+            return false
         }
     }
 
@@ -95,19 +104,28 @@ struct GameView: View {
                 .font(.system(size: 40, weight: .black, design: .rounded))
                 .foregroundStyle(.red)
 
-            Text("Score: \(gameState.score)")
-                .font(.system(size: 28, weight: .bold, design: .rounded))
-                .foregroundStyle(.white)
+            VStack(spacing: 8) {
+                Text("Score: \(gameState.score)")
+                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
 
-            Text("Rounds: \(gameState.roundsSurvived)")
-                .font(.system(size: 18, design: .rounded))
-                .foregroundStyle(.white.opacity(0.7))
+                Text("Best Combo: x\(gameState.bestCombo)")
+                    .font(.system(size: 18, design: .rounded))
+                    .foregroundStyle(.orange)
 
-            Button {
-                gameState.reset()
-                gameScene?.startGame()
-            } label: {
-                Text("Play Again")
+                Text("Rounds Survived: \(gameState.roundsSurvived)")
+                    .font(.system(size: 16, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.7))
+            }
+
+            VStack(spacing: 12) {
+                Button {
+                    gameScene?.startGame()
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "arrow.counterclockwise")
+                        Text("Play Again")
+                    }
                     .font(.system(size: 20, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 40)
@@ -116,6 +134,22 @@ struct GameView: View {
                         RoundedRectangle(cornerRadius: 16)
                             .fill(.orange.gradient)
                     )
+                }
+
+                if let onHome {
+                    Button {
+                        gameScene?.stopGame()
+                        onHome()
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "house.fill")
+                            Text("Home")
+                        }
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.7))
+                        .padding(.vertical, 8)
+                    }
+                }
             }
         }
         .padding(40)
