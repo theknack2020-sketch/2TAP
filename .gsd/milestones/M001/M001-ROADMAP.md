@@ -61,10 +61,10 @@ This milestone is complete only when all are true:
 - [x] **S02: Scoring, Lives & Game Polish** `risk:medium` `depends:[S01]`
   > After this: Score increases with combo multiplier, 3 lives with +1 bonus every 10 perfect rounds, difficulty increases (more balls), pause system works (3 uses), frame feedback (green/red flash), 3D metallic ball rendering.
 
-- [ ] **S03: Menus, Settings & Theming** `risk:medium` `depends:[S01]`
+- [x] **S03: Menus, Settings & Theming** `risk:medium` `depends:[S01]`
   > After this: Main menu with animated background and logo placeholder, settings screen with sound/music/theme/palette toggles, dark/light/system theme works throughout app. Navigation between menu ↔ game ↔ settings.
 
-- [ ] **S04: Game Over & Persistence** `risk:low` `depends:[S02,S03]`
+- [x] **S04: Game Over & Persistence** `risk:low` `depends:[S02,S03]`
   > After this: Game over screen shows score summary (final score, best combo, rounds survived), replay and home buttons work, high score persists across app restarts, double-confirm score reset in settings.
 
 - [ ] **S05: Audio System** `risk:low` `depends:[S01]`

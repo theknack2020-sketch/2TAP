@@ -1,18 +1,18 @@
 # GSD State
 
 **Active Milestone:** M001 — 2TAP Game
-**Active Slice:** S03 — Menus, Settings & Theming
+**Active Slice:** S05 — Audio System
 **Active Task:** None (slice not yet planned)
-**Phase:** Planning S03
+**Phase:** Planning S05
 
 ## Recent Decisions
-- Always 3 matching balls per round (D005 updated)
-- Base points 100, combo x1-x10, bonus life every 10 perfect
-- Difficulty: 5→12 balls across 7 score thresholds
-- 3D balls via layered SKShapeNodes
+- SettingsManager singleton with UserDefaults persistence
+- Dark/light/system theme via .preferredColorScheme
+- Palette selection persisted, applied at game start
+- Double-confirm alert for high score reset
 
 ## Blockers
 - None
 
 ## Next Action
-Plan and execute S03 (Menus, Settings & Theming).
+Plan and execute S05 (Audio System).

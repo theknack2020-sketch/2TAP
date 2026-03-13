@@ -4,6 +4,7 @@ import SpriteKit
 /// SwiftUI wrapper for the SpriteKit game scene.
 struct GameView: View {
     var onHome: (() -> Void)?
+    @Environment(SettingsManager.self) private var settings
     @State var gameState = GameState()
     @State private var gameScene: GameScene?
     @State private var showFlash = false
@@ -128,6 +129,7 @@ struct GameView: View {
             gameScene = newScene
 
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                gameState.palette = settings.selectedPalette
                 gameScene?.startGame()
             }
         }
@@ -137,6 +139,15 @@ struct GameView: View {
         .onChange(of: gameState.flashColor) { _, newValue in
             if newValue != .none {
                 triggerFlash()
+            }
+        }
+        .onChange(of: gameState.phase) { _, newPhase in
+            if newPhase == .gameOver {
+                settings.updateHighScore(
+                    score: gameState.score,
+                    bestCombo: gameState.bestCombo,
+                    rounds: gameState.roundsSurvived
+                )
             }
         }
     }
@@ -304,4 +315,5 @@ struct GameView: View {
 
 #Preview {
     GameView()
+        .environment(SettingsManager.shared)
 }

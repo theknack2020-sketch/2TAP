@@ -4,6 +4,9 @@ import SwiftUI
 /// Logo, game name, Play button, Settings button.
 struct MainMenuView: View {
     let onPlay: () -> Void
+    var onSettings: (() -> Void)?
+
+    @Environment(SettingsManager.self) private var settings
 
     @State private var logoScale: CGFloat = 0.5
     @State private var logoOpacity: Double = 0
@@ -95,9 +98,23 @@ struct MainMenuView: View {
                 }
                 .opacity(logoOpacity)
 
-                // Settings button (placeholder — wired in S03)
+                // High score
+                if settings.highScore > 0 {
+                    HStack(spacing: 6) {
+                        Image(systemName: "trophy.fill")
+                            .foregroundStyle(.yellow.opacity(0.7))
+                            .font(.system(size: 14))
+                        Text("Best: \(settings.highScore)")
+                            .font(.system(size: 15, weight: .semibold, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.5))
+                    }
+                    .padding(.top, 8)
+                    .opacity(logoOpacity)
+                }
+
+                // Settings button
                 Button {
-                    // Settings — implemented in S03
+                    onSettings?()
                 } label: {
                     HStack(spacing: 8) {
                         Image(systemName: "gearshape.fill")
@@ -107,7 +124,7 @@ struct MainMenuView: View {
                     .foregroundStyle(.white.opacity(0.6))
                     .padding(.vertical, 12)
                 }
-                .padding(.top, 16)
+                .padding(.top, 12)
                 .opacity(logoOpacity)
 
                 Spacer()
@@ -160,4 +177,5 @@ private struct FloatingBallsBackground: View {
 
 #Preview {
     MainMenuView(onPlay: {})
+        .environment(SettingsManager.shared)
 }
