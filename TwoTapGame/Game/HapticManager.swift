@@ -2,84 +2,75 @@ import UIKit
 
 /// Centralized haptic feedback for game events.
 ///
-/// Uses UIKit's haptic generators for precise, low-latency feedback.
-/// Generators are pre-warmed for instant response.
-@MainActor
+/// Haptic generators are prepared before each use for instant response.
+/// All methods fire synchronously on whatever thread they're called from.
 final class HapticManager {
     static let shared = HapticManager()
 
-    private let lightImpact = UIImpactFeedbackGenerator(style: .light)
-    private let mediumImpact = UIImpactFeedbackGenerator(style: .medium)
-    private let heavyImpact = UIImpactFeedbackGenerator(style: .heavy)
-    private let rigid = UIImpactFeedbackGenerator(style: .rigid)
-    private let notification = UINotificationFeedbackGenerator()
-    private let selection = UISelectionFeedbackGenerator()
-
-    private init() {
-        // Pre-warm all generators
-        lightImpact.prepare()
-        mediumImpact.prepare()
-        heavyImpact.prepare()
-        rigid.prepare()
-        notification.prepare()
-        selection.prepare()
-    }
+    private init() {}
 
     /// Ball tap — light, crisp
     func tap() {
-        lightImpact.impactOccurred(intensity: 0.6)
-        lightImpact.prepare()
+        let gen = UIImpactFeedbackGenerator(style: .light)
+        gen.prepare()
+        gen.impactOccurred(intensity: 0.6)
     }
 
     /// Correct match tap — satisfying medium thud
     func correctTap() {
-        mediumImpact.impactOccurred(intensity: 0.8)
-        mediumImpact.prepare()
+        let gen = UIImpactFeedbackGenerator(style: .medium)
+        gen.prepare()
+        gen.impactOccurred(intensity: 0.8)
     }
 
     /// Wrong tap — sharp error buzz
     func wrongTap() {
-        notification.notificationOccurred(.error)
-        notification.prepare()
+        let gen = UINotificationFeedbackGenerator()
+        gen.prepare()
+        gen.notificationOccurred(.error)
     }
 
     /// Round success — double tap celebration
     func success() {
-        rigid.impactOccurred(intensity: 1.0)
-        rigid.prepare()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) { [self] in
-            rigid.impactOccurred(intensity: 0.6)
-            rigid.prepare()
+        let gen = UIImpactFeedbackGenerator(style: .rigid)
+        gen.prepare()
+        gen.impactOccurred(intensity: 1.0)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+            gen.impactOccurred(intensity: 0.6)
         }
     }
 
     /// Life lost — heavy thud
     func lifeLost() {
-        heavyImpact.impactOccurred(intensity: 1.0)
-        heavyImpact.prepare()
+        let gen = UIImpactFeedbackGenerator(style: .heavy)
+        gen.prepare()
+        gen.impactOccurred(intensity: 1.0)
     }
 
     /// Game over — triple descending buzz
     func gameOver() {
-        heavyImpact.impactOccurred(intensity: 1.0)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) { [self] in
-            heavyImpact.impactOccurred(intensity: 0.7)
+        let gen = UIImpactFeedbackGenerator(style: .heavy)
+        gen.prepare()
+        gen.impactOccurred(intensity: 1.0)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
+            gen.impactOccurred(intensity: 0.7)
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.24) { [self] in
-            heavyImpact.impactOccurred(intensity: 0.4)
-            heavyImpact.prepare()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.24) {
+            gen.impactOccurred(intensity: 0.4)
         }
     }
 
     /// Combo streak — quick selection tick
     func combo() {
-        selection.selectionChanged()
-        selection.prepare()
+        let gen = UISelectionFeedbackGenerator()
+        gen.prepare()
+        gen.selectionChanged()
     }
 
     /// Countdown tick
     func countdownTick() {
-        rigid.impactOccurred(intensity: 0.4)
-        rigid.prepare()
+        let gen = UIImpactFeedbackGenerator(style: .rigid)
+        gen.prepare()
+        gen.impactOccurred(intensity: 0.5)
     }
 }

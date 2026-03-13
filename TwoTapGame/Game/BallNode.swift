@@ -259,43 +259,53 @@ class BallNode: SKNode {
 
     // MARK: - Zero-Gravity Drift
 
-    /// Gentle floating motion — like balls drifting in zero gravity.
-    /// Random direction, slow speed, reverses smoothly.
+    /// Gentle floating motion — balls slowly wander like in space.
+    /// Visible but not distracting: ~8-12pt total movement.
     private func startDrift() {
-        let dx = CGFloat.random(in: -3...3)
-        let dy = CGFloat.random(in: -3...3)
-        let dur = Double.random(in: 2.0...3.5)
+        // Each ball gets a unique random orbit
+        let angle = CGFloat.random(in: 0...(2 * .pi))
+        let dist = CGFloat.random(in: 5...8)
+        let dx = cos(angle) * dist
+        let dy = sin(angle) * dist
+        let dur = Double.random(in: 1.8...2.8)
 
-        let drift = SKAction.sequence([
-            SKAction.moveBy(x: dx, y: dy, duration: dur),
-            SKAction.moveBy(x: -dx, y: -dy, duration: dur)
+        let forward = SKAction.moveBy(x: dx, y: dy, duration: dur)
+        forward.timingMode = .easeInEaseOut
+        let back = SKAction.moveBy(x: -dx, y: -dy, duration: dur)
+        back.timingMode = .easeInEaseOut
+
+        run(SKAction.repeatForever(SKAction.sequence([forward, back])), withKey: "drift")
+
+        // Also add a very slow rotation wobble
+        let wobbleAngle = CGFloat.random(in: 0.02...0.05)
+        let wobbleDur = Double.random(in: 2.5...3.5)
+        let wobble = SKAction.sequence([
+            SKAction.rotate(byAngle: wobbleAngle, duration: wobbleDur),
+            SKAction.rotate(byAngle: -wobbleAngle, duration: wobbleDur)
         ])
-        drift.timingMode = .easeInEaseOut
-
-        run(SKAction.repeatForever(drift), withKey: "drift")
+        run(SKAction.repeatForever(wobble), withKey: "wobble")
     }
 
     // MARK: - Specular Shimmer
 
-    /// Subtle highlight animation — the specular spot slowly shifts,
-    /// simulating light reflection on a metallic surface.
+    /// The specular highlight slowly drifts across the ball surface,
+    /// simulating dynamic light reflection on metal.
     private func startShimmer() {
-        let dx = CGFloat.random(in: -2...2)
-        let dy = CGFloat.random(in: -1...1)
-        let dur = Double.random(in: 1.5...2.5)
+        let dx = CGFloat.random(in: -3...3)
+        let dy = CGFloat.random(in: -2...2)
+        let dur = Double.random(in: 1.2...2.0)
 
         let shift = SKAction.sequence([
             SKAction.moveBy(x: dx, y: dy, duration: dur),
             SKAction.moveBy(x: -dx, y: -dy, duration: dur)
         ])
         shift.timingMode = .easeInEaseOut
-
         specularHighlight.run(SKAction.repeatForever(shift), withKey: "shimmer")
 
-        // Also pulse the highlight opacity slightly
+        // Pulse the highlight brightness
         let pulse = SKAction.sequence([
-            SKAction.fadeAlpha(to: 0.35, duration: dur * 0.8),
-            SKAction.fadeAlpha(to: 0.55, duration: dur * 0.8)
+            SKAction.fadeAlpha(to: 0.3, duration: dur * 0.7),
+            SKAction.fadeAlpha(to: 0.6, duration: dur * 0.7)
         ])
         specularHighlight.run(SKAction.repeatForever(pulse), withKey: "shimmerPulse")
     }
