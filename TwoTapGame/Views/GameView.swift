@@ -97,12 +97,10 @@ struct GameView: View {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                 gameState.palette = settings.selectedPalette
                 gameScene?.startGame()
-                AudioManager.shared.startMusic()
             }
         }
         .onDisappear {
             gameScene?.stopGame()
-            AudioManager.shared.stopMusic()
         }
         .onChange(of: gameState.flashColor) { _, newValue in
             if newValue != .none {

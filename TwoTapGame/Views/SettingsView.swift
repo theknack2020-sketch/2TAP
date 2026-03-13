@@ -18,10 +18,6 @@ struct SettingsView: View {
                     Toggle(isOn: $settings.soundEnabled) {
                         Label("Sound Effects", systemImage: "speaker.wave.2.fill")
                     }
-
-                    Toggle(isOn: $settings.musicEnabled) {
-                        Label("Music", systemImage: "music.note")
-                    }
                 } header: {
                     Text("Audio")
                 }
