@@ -168,7 +168,9 @@ class BallNode: SKNode {
         let dx = point.x - position.x
         let dy = point.y - position.y
         let distance = sqrt(dx * dx + dy * dy)
-        return distance <= radius
+        // Ensure minimum 44pt diameter touch target (Apple HIG)
+        let touchRadius = max(radius, 22)
+        return distance <= touchRadius
     }
 }
 

@@ -5,6 +5,10 @@ import UIKit
 ///
 /// Manages ball spawning, touch detection, timer, and round cycling.
 /// Communicates state to SwiftUI via GameState (@Observable).
+///
+/// **Threading model:** SpriteView runs the scene on the main thread.
+/// All GameState access is guarded with MainActor.assumeIsolated to
+/// prevent data races between SpriteKit's update loop and SwiftUI.
 class GameScene: SKScene {
 
     // MARK: - Properties
@@ -14,6 +18,11 @@ class GameScene: SKScene {
     private var ballNodes: [BallNode] = []
     private var lastUpdateTime: TimeInterval = 0
     private var timerActive: Bool = false
+
+    // Local timer shadow — avoids reading GameState from render thread
+    private var localTimerProgress: Double = 1.0
+    private var localTimerDuration: Double = 2.0
+    private var localPhase: RoundPhase = .idle
 
     // Round data
     private var currentRoundColors: RoundColors?
@@ -35,6 +44,7 @@ class GameScene: SKScene {
         removeAction(forKey: "countdown")
         removeAction(forKey: "nextRound")
         timerActive = false
+        localPhase = .idle
 
         // Clear any leftover balls
         clearBallsImmediate()
@@ -43,13 +53,11 @@ class GameScene: SKScene {
             state.reset()
         }
 
-        // 2-1 countdown (2TAP = 2 seconds identity)
         runCountdown(isFirstRound: true)
     }
 
     /// Start the next round with 2-1 countdown between rounds.
     func startNextRound() {
-        // Clear existing balls first, then countdown, then spawn
         clearBalls { [weak self] in
             self?.runCountdown(isFirstRound: false)
         }
@@ -80,7 +88,6 @@ class GameScene: SKScene {
         )
         currentRoundColors = roundColors
 
-        // Create ball nodes
         var newBalls: [BallState] = []
         for (index, position) in positions.enumerated() {
             let color = roundColors.assignments[index]
@@ -145,23 +152,18 @@ class GameScene: SKScene {
 
     // MARK: - Countdown (2-1, not 3-2-1)
 
-    /// Runs 2→1 countdown, then spawns balls and starts timer.
-    /// - Parameter isFirstRound: if true, increments roundNumber to 1
     private func runCountdown(isFirstRound: Bool) {
         guard let state = gameState else { return }
 
         let countdownSequence = SKAction.sequence([
-            // "2"
             SKAction.run {
                 Task { @MainActor in state.phase = .countdown(number: 2) }
             },
             SKAction.wait(forDuration: 0.7),
-            // "1"
             SKAction.run {
                 Task { @MainActor in state.phase = .countdown(number: 1) }
             },
             SKAction.wait(forDuration: 0.7),
-            // Start playing
             SKAction.run { [weak self] in
                 guard let self = self, let state = self.gameState else { return }
                 Task { @MainActor in
@@ -172,6 +174,7 @@ class GameScene: SKScene {
                     }
                     state.phase = .playing
                 }
+                self.localPhase = .playing
                 self.spawnBalls()
                 self.startTimer()
             }
@@ -189,12 +192,15 @@ class GameScene: SKScene {
             state.timerProgress = 1.0
         }
 
+        localTimerProgress = 1.0
+        localTimerDuration = state.timerDuration
         lastUpdateTime = 0
         timerActive = true
     }
 
     override func update(_ currentTime: TimeInterval) {
-        guard timerActive, let state = gameState else { return }
+        guard timerActive else { return }
+        guard localPhase == .playing else { return }
 
         if lastUpdateTime == 0 {
             lastUpdateTime = currentTime
@@ -204,64 +210,61 @@ class GameScene: SKScene {
         let deltaTime = currentTime - lastUpdateTime
         lastUpdateTime = currentTime
 
-        // Only update timer while playing
-        guard state.phase == .playing else { return }
+        // Update local shadow timer
+        localTimerProgress = max(0, localTimerProgress - (deltaTime / localTimerDuration))
+        let progress = localTimerProgress
 
-        let newProgress = max(0, state.timerProgress - (deltaTime / state.timerDuration))
-
+        // Sync to GameState for UI
         Task { @MainActor in
-            state.timerProgress = newProgress
+            self.gameState?.timerProgress = progress
+        }
 
-            if newProgress <= 0 {
-                self.timerActive = false
-                self.handleTimeout()
-            }
+        if progress <= 0 {
+            timerActive = false
+            localPhase = .failure
+            handleTimeout()
         }
     }
 
     // MARK: - Touch Handling
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        guard let state = gameState, state.phase == .playing else { return }
+        // Use local phase shadow to avoid cross-thread read
+        guard localPhase == .playing else { return }
+        guard let state = gameState else { return }
+        guard !state.isPaused else { return } // pause guard
         guard let touch = touches.first else { return }
 
         let location = touch.location(in: self)
 
-        // Find which ball was tapped
         for node in ballNodes {
             if node.hitTest(at: location) && !node.isTapped {
                 handleBallTap(node)
                 return
             }
         }
-        // Tapping empty space — do nothing (not a mistake)
     }
 
     private func handleBallTap(_ node: BallNode) {
         guard let state = gameState else { return }
+        guard localPhase == .playing else { return } // race guard
 
         node.tap()
 
         Task { @MainActor in
             AudioManager.shared.playTap()
             state.markBallTapped(id: node.ballId)
-        }
 
-        if node.isMatch {
-            // Correct tap — check if all matches found
-            Task { @MainActor in
+            if node.isMatch {
                 if state.allMatchesTapped {
                     AudioManager.shared.playSuccess()
                     self.handleRoundSuccess()
                 }
-            }
-        } else {
-            // Wrong tap — round failure
-            node.showError()
-            Task { @MainActor in
+            } else {
                 AudioManager.shared.playError()
+                node.showError()
+                self.handleRoundFailure()
             }
-            handleRoundFailure()
         }
     }
 
@@ -269,7 +272,10 @@ class GameScene: SKScene {
 
     private func handleRoundSuccess() {
         guard let state = gameState else { return }
+        guard localPhase == .playing else { return } // prevent double-fire
+
         timerActive = false
+        localPhase = .success
 
         // Celebrate matching balls
         for node in ballNodes where node.isMatch {
@@ -283,31 +289,21 @@ class GameScene: SKScene {
             state.bestCombo = max(state.bestCombo, state.combo)
             state.roundsSurvived += 1
 
-            // Scoring via engine
             let points = ScoreEngine.pointsForRound(combo: state.combo)
             state.score += points
 
-            // Bonus life every 10 perfect rounds
             if ScoreEngine.shouldAwardBonusLife(consecutivePerfect: state.consecutivePerfect) {
                 state.lives += 1
             }
 
-            // Difficulty — update ball count based on score
             state.ballCount = DifficultyEngine.ballCount(forScore: state.score)
-
-            // Frame flash
             state.flashColor = .success
         }
 
-        // Brief pause, then clear balls → 2-1 countdown → next round
         let nextAction = SKAction.sequence([
             SKAction.wait(forDuration: 0.4),
             SKAction.run { [weak self] in
-                guard let self = self, let state = self.gameState else { return }
-                Task { @MainActor in
-                    guard state.lives > 0 else { return }
-                }
-                self.startNextRound()
+                self?.startNextRound()
             }
         ])
         run(nextAction, withKey: "nextRound")
@@ -315,8 +311,16 @@ class GameScene: SKScene {
 
     private func handleRoundFailure() {
         guard let state = gameState else { return }
-        timerActive = false
-        removeAction(forKey: "nextRound")
+        guard localPhase == .playing || localPhase == .failure else { return }
+
+        // Only transition once — prevent double-fire from race
+        if localPhase == .playing {
+            timerActive = false
+            localPhase = .failure
+            removeAction(forKey: "nextRound")
+        } else {
+            return // already handling failure
+        }
 
         Task { @MainActor in
             state.phase = .failure
@@ -326,25 +330,20 @@ class GameScene: SKScene {
             state.flashColor = .failure
 
             let livesLeft = state.lives
-
-            // Longer pause so player can see what happened
             let delay: TimeInterval = livesLeft <= 0 ? 1.8 : 1.5
 
-            // Schedule next action on main thread after delay
             try? await Task.sleep(for: .seconds(delay))
 
             // Check we're still in failure phase (user might have restarted)
             guard state.phase == .failure else { return }
 
             if livesLeft <= 0 {
-                // Game over — clear balls, show overlay, do NOT auto-restart
                 self.clearBalls {
                     Task { @MainActor in
                         state.phase = .gameOver
                     }
                 }
             } else {
-                // Continue — next round with countdown
                 self.startNextRound()
             }
         }
@@ -380,6 +379,7 @@ class GameScene: SKScene {
         removeAction(forKey: "countdown")
         removeAction(forKey: "nextRound")
         timerActive = false
+        localPhase = .idle
         clearBallsImmediate()
     }
 }

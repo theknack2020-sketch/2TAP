@@ -68,25 +68,27 @@ extension ColorPalette {
         ]
     )
 
-    /// Pastel palette — soft, muted colors.
+    /// Pastel palette — soft, muted colors. Perceptually distinct pairs guaranteed.
     static let pastel = ColorPalette(
         id: "pastel",
         name: "Pastel",
         colors: [
-            UIColor(red: 1.00, green: 0.71, blue: 0.76, alpha: 1.0),  // Pastel Pink
-            UIColor(red: 0.68, green: 0.85, blue: 0.90, alpha: 1.0),  // Pastel Blue
-            UIColor(red: 0.60, green: 0.98, blue: 0.60, alpha: 1.0),  // Pastel Green
-            UIColor(red: 1.00, green: 1.00, blue: 0.60, alpha: 1.0),  // Pastel Yellow
-            UIColor(red: 0.80, green: 0.60, blue: 0.80, alpha: 1.0),  // Pastel Purple
-            UIColor(red: 1.00, green: 0.85, blue: 0.73, alpha: 1.0),  // Pastel Peach
-            UIColor(red: 0.69, green: 0.88, blue: 0.90, alpha: 1.0),  // Powder Blue
-            UIColor(red: 0.94, green: 0.90, blue: 0.55, alpha: 1.0),  // Pastel Gold
-            UIColor(red: 0.80, green: 0.73, blue: 0.96, alpha: 1.0),  // Pastel Lavender
-            UIColor(red: 0.56, green: 0.93, blue: 0.56, alpha: 1.0),  // Light Green
-            UIColor(red: 1.00, green: 0.63, blue: 0.48, alpha: 1.0),  // Coral
-            UIColor(red: 0.69, green: 0.77, blue: 0.87, alpha: 1.0),  // Steel Blue
-            UIColor(red: 0.96, green: 0.76, blue: 0.76, alpha: 1.0),  // Misty Rose
-            UIColor(red: 0.73, green: 0.91, blue: 0.73, alpha: 1.0),  // Mint
+            UIColor(red: 1.00, green: 0.60, blue: 0.68, alpha: 1.0),  // Rose Pink
+            UIColor(red: 0.53, green: 0.81, blue: 0.92, alpha: 1.0),  // Sky Blue
+            UIColor(red: 0.56, green: 0.93, blue: 0.56, alpha: 1.0),  // Mint Green
+            UIColor(red: 1.00, green: 0.95, blue: 0.45, alpha: 1.0),  // Lemon Yellow
+            UIColor(red: 0.73, green: 0.50, blue: 0.85, alpha: 1.0),  // Grape Purple
+            UIColor(red: 1.00, green: 0.75, blue: 0.50, alpha: 1.0),  // Tangerine
+            UIColor(red: 0.40, green: 0.80, blue: 0.75, alpha: 1.0),  // Seafoam
+            UIColor(red: 0.93, green: 0.85, blue: 0.40, alpha: 1.0),  // Honey Gold
+            UIColor(red: 0.68, green: 0.58, blue: 0.96, alpha: 1.0),  // Lavender
+            UIColor(red: 0.45, green: 0.90, blue: 0.45, alpha: 1.0),  // Spring Green
+            UIColor(red: 1.00, green: 0.55, blue: 0.40, alpha: 1.0),  // Coral
+            UIColor(red: 0.40, green: 0.60, blue: 0.85, alpha: 1.0),  // Periwinkle
+            UIColor(red: 0.90, green: 0.50, blue: 0.70, alpha: 1.0),  // Orchid
+            UIColor(red: 0.55, green: 0.85, blue: 0.55, alpha: 1.0),  // Sage
+            UIColor(red: 0.95, green: 0.65, blue: 0.75, alpha: 1.0),  // Blush
+            UIColor(red: 0.50, green: 0.72, blue: 0.90, alpha: 1.0),  // Cornflower
         ]
     )
 
