@@ -243,6 +243,12 @@ class GameScene: SKScene {
                 return
             }
         }
+
+        // Tapped empty space — that's a miss
+        handleRoundFailure()
+        Task { @MainActor in
+            AudioManager.shared.playWrongTap()
+        }
     }
 
     private func handleBallTap(_ node: BallNode) {
