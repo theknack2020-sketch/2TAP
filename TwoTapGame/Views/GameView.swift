@@ -1,5 +1,6 @@
 import SwiftUI
 import SpriteKit
+import StoreKit
 
 /// SwiftUI wrapper for the SpriteKit game scene.
 struct GameView: View {
@@ -7,8 +8,10 @@ struct GameView: View {
     @Environment(SettingsManager.self) private var settings
     @State var gameState = GameState()
     @State private var gameScene: GameScene?
+    @Environment(\.requestReview) private var requestReview
     @State private var showFlash = false
     @State private var flashOpacity: Double = 0
+    @State private var gamesPlayed: Int = 0
 
     var body: some View {
         ZStack {
@@ -148,6 +151,14 @@ struct GameView: View {
                     bestCombo: gameState.bestCombo,
                     rounds: gameState.roundsSurvived
                 )
+
+                // Ask for review after 5th game, if score decent
+                gamesPlayed += 1
+                if gamesPlayed == 5 && gameState.score >= 500 {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                        requestReview()
+                    }
+                }
             }
         }
     }

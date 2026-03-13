@@ -70,10 +70,10 @@ This milestone is complete only when all are true:
 - [x] **S05: Audio System** `risk:low` `depends:[S01]`
   > After this: Cartoon tap sound on ball touch, bomb sound on wrong/timeout, 10 background music loops play randomly, music toggleable in settings and via in-game icon.
 
-- [ ] **S06: AI Asset Generation** `risk:medium` `depends:[S03]`
+- [x] **S06: AI Asset Generation** `risk:medium` `depends:[S03]`
   > After this: Gemini-generated logo (multiple variations, best selected) with special care, app icon in all sizes, menu backgrounds, all embedded in the app. Logo displayed prominently on main menu.
 
-- [ ] **S07: ASO & Store Readiness** `risk:low` `depends:[S06]`
+- [x] **S07: ASO & Store Readiness** `risk:low` `depends:[S06]`
   > After this: App Store listing fully prepared — optimized title, subtitle, keywords (100 chars used), description with hook + features, screenshots for all required sizes, privacy policy, category selection, EN + TR localization.
 
 ## Boundary Map
