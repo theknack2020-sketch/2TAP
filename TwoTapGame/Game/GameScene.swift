@@ -302,6 +302,11 @@ class GameScene: SKScene {
 
             state.ballCount = DifficultyEngine.ballCount(forScore: state.score)
             state.flashColor = .success
+
+            // Combo sound for streaks
+            if state.combo > 1 {
+                AudioManager.shared.playCombo()
+            }
         }
 
         let nextAction = SKAction.sequence([
@@ -327,6 +332,7 @@ class GameScene: SKScene {
             state.consecutivePerfect = 0
             state.lives -= 1
             state.flashColor = .failure
+            AudioManager.shared.playLifeLost()
 
             let livesLeft = state.lives
             let delay: TimeInterval = livesLeft <= 0 ? 1.8 : 1.5
