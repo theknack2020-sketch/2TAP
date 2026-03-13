@@ -17,6 +17,9 @@ class BallNode: SKNode {
     let isMatch: Bool
     private(set) var isTapped: Bool = false
 
+    /// Speed multiplier for physics movement — set before animateAppear.
+    var speedMultiplier: CGFloat = 1.0
+
     private let shadowNode: SKShapeNode
     private let baseCircle: SKShapeNode
     private let darkEdge: SKShapeNode
@@ -269,21 +272,23 @@ class BallNode: SKNode {
             wait,
             SKAction.group([scaleIn, fadeIn]),
             SKAction.run { [weak self] in
-                self?.startMoving()
-                self?.startShimmer()
+                guard let self else { return }
+                self.startMoving(speedMultiplier: self.speedMultiplier)
+                self.startShimmer()
             }
         ]))
     }
 
     // MARK: - Billiard Physics
 
-    /// Give the ball a random initial velocity. It will bounce off walls via physics.
-    func startMoving() {
-        let speed = CGFloat.random(in: 25...50) // points per second — gentle
+    /// Give the ball a random initial velocity.
+    /// Speed scales with difficulty mode — insane balls move faster.
+    func startMoving(speedMultiplier: CGFloat = 1.0) {
+        let baseMin: CGFloat = 25
+        let baseMax: CGFloat = 50
+        let speed = CGFloat.random(in: baseMin...baseMax) * speedMultiplier
         let angle = CGFloat.random(in: 0...(2 * .pi))
-        let vx = cos(angle) * speed
-        let vy = sin(angle) * speed
-        physicsBody?.velocity = CGVector(dx: vx, dy: vy)
+        physicsBody?.velocity = CGVector(dx: cos(angle) * speed, dy: sin(angle) * speed)
     }
 
     /// Stop all physics movement (for when ball is tapped/removed).

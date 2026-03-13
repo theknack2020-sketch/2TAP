@@ -37,27 +37,36 @@ class GameScene: SKScene {
     }
 
     /// Create wall boundaries so balls bounce off screen edges.
-    /// Inset slightly so balls don't clip the edge visually.
+    /// Top wall is lowered to keep balls out of the HUD area.
     private func setupWalls() {
-        // Remove old walls if resized
         childNode(withName: "walls")?.removeFromParent()
 
         let inset: CGFloat = 4
-        let rect = CGRect(
-            x: inset, y: inset,
-            width: size.width - inset * 2,
-            height: size.height - inset * 2
-        )
-        let wallBody = SKPhysicsBody(edgeLoopFrom: rect)
-        wallBody.friction = 0
-        wallBody.restitution = 1.0
-        wallBody.categoryBitMask = 0x2   // wall
-        wallBody.collisionBitMask = 0x1  // collide with balls
 
-        let wallNode = SKNode()
-        wallNode.name = "walls"
-        wallNode.physicsBody = wallBody
-        addChild(wallNode)
+        // In SpriteKit coords (y=0 at bottom), the ceiling is height - hudTopInset.
+        let ceilingY = size.height - hudTopInset
+
+        // Build walls as 4 separate edges (edgeLoop would use full rect)
+        let walls = SKNode()
+        walls.name = "walls"
+
+        let bottom = SKPhysicsBody(edgeFrom: CGPoint(x: inset, y: inset),
+                                        to: CGPoint(x: size.width - inset, y: inset))
+        let left   = SKPhysicsBody(edgeFrom: CGPoint(x: inset, y: inset),
+                                        to: CGPoint(x: inset, y: ceilingY))
+        let right  = SKPhysicsBody(edgeFrom: CGPoint(x: size.width - inset, y: inset),
+                                        to: CGPoint(x: size.width - inset, y: ceilingY))
+        let top    = SKPhysicsBody(edgeFrom: CGPoint(x: inset, y: ceilingY),
+                                        to: CGPoint(x: size.width - inset, y: ceilingY))
+
+        let compound = SKPhysicsBody(bodies: [bottom, left, right, top])
+        compound.friction = 0
+        compound.restitution = 1.0
+        compound.categoryBitMask = 0x2
+        compound.collisionBitMask = 0x1
+
+        walls.physicsBody = compound
+        addChild(walls)
     }
 
     // MARK: - Round Management
@@ -90,19 +99,24 @@ class GameScene: SKScene {
     }
 
     /// Spawn balls for the current round.
+    /// Top zone reserved for HUD — shared between walls and ball placement.
+    private let hudTopInset: CGFloat = 160
+
     private func spawnBalls() {
         guard let state = gameState else { return }
         let screenSize = size
 
         let ballRadius = BallPlacementEngine.recommendedBallRadius(
             for: screenSize,
-            ballCount: state.ballCount
+            ballCount: state.ballCount,
+            topInset: hudTopInset
         )
 
         guard let positions = BallPlacementEngine.generatePositions(
             count: state.ballCount,
             ballRadius: ballRadius,
-            screenSize: screenSize
+            screenSize: screenSize,
+            topInset: hudTopInset
         ) else {
             print("⚠️ Ball placement failed for \(state.ballCount) balls on \(screenSize)")
             return
@@ -125,6 +139,13 @@ class GameScene: SKScene {
                 radius: ballRadius,
                 isMatch: isMatch
             )
+            // Ball speed scales with difficulty
+            switch state.difficultyMode {
+            case .easy:   node.speedMultiplier = 0.6
+            case .normal: node.speedMultiplier = 1.0
+            case .insane: node.speedMultiplier = 1.6
+            }
+
             node.position = position
             node.animateAppear(delay: Double(index) * 0.05)
 
@@ -323,8 +344,17 @@ class GameScene: SKScene {
             }
         }
 
-        // Clamp max speed
-        let maxSpeed: CGFloat = 55
+        // Clamp max speed — scales with difficulty
+        let baseMaxSpeed: CGFloat = 55
+        let diffMultiplier: CGFloat = {
+            guard let mode = gameState?.difficultyMode else { return 1.0 }
+            switch mode {
+            case .easy:   return 0.6
+            case .normal: return 1.0
+            case .insane: return 1.6
+            }
+        }()
+        let maxSpeed = baseMaxSpeed * diffMultiplier
         for ball in activeBalls {
             guard let body = ball.physicsBody else { continue }
             let speed = sqrt(body.velocity.dx * body.velocity.dx + body.velocity.dy * body.velocity.dy)
