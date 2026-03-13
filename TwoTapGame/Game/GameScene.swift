@@ -249,11 +249,10 @@ class GameScene: SKScene {
         guard let state = gameState else { return }
         guard localPhase == .playing else { return } // race guard
 
-        node.tap()
-
         if node.isMatch {
+            node.tapCorrect()
             Task { @MainActor in
-                AudioManager.shared.playTap()
+                AudioManager.shared.playCorrectTap()
                 state.markBallTapped(id: node.ballId)
 
                 if state.allMatchesTapped {
@@ -262,11 +261,11 @@ class GameScene: SKScene {
                 }
             }
         } else {
-            // Wrong tap — handle failure synchronously on scene thread
-            node.showError()
+            // Wrong tap — explode red, handle failure synchronously
+            node.tapWrong()
             handleRoundFailure()
             Task { @MainActor in
-                AudioManager.shared.playError()
+                AudioManager.shared.playWrongTap()
                 state.markBallTapped(id: node.ballId)
             }
         }

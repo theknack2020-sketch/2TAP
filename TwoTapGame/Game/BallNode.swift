@@ -97,50 +97,145 @@ class BallNode: SKNode {
 
     // MARK: - Interaction
 
-    func tap() {
+    /// Correct match tap: ball explodes with golden particle burst
+    func tapCorrect() {
         guard !isTapped else { return }
         isTapped = true
+        explode(particleColor: .systemYellow, burstColor: ballColor, style: .correct)
+    }
 
-        let scaleUp = SKAction.scale(to: 1.15, duration: 0.06)
-        let scaleDown = SKAction.scale(to: 0.92, duration: 0.08)
-        let scaleNormal = SKAction.scale(to: 1.0, duration: 0.05)
-        let dim = SKAction.fadeAlpha(to: 0.55, duration: 0.12)
+    /// Wrong tap: ball explodes with red puff
+    func tapWrong() {
+        guard !isTapped else { return }
+        isTapped = true
+        explode(particleColor: .systemRed, burstColor: .red, style: .wrong)
+    }
 
-        let bounceSequence = SKAction.sequence([scaleUp, scaleDown, scaleNormal])
-        run(SKAction.group([bounceSequence, dim]))
+    /// Legacy — calls correct or wrong based on isMatch
+    func tap() {
+        if isMatch { tapCorrect() } else { tapWrong() }
     }
 
     func celebrateMatch() {
-        let scaleUp = SKAction.scale(to: 1.3, duration: 0.15)
-        let fadeOut = SKAction.fadeOut(withDuration: 0.2)
-        run(SKAction.sequence([scaleUp, fadeOut]))
+        // Already exploded via tapCorrect — no-op
+        guard !isTapped else { return }
+        tapCorrect()
     }
 
     func showError() {
-        let originalColor = baseCircle.fillColor
+        // Already exploded via tapWrong — shake the remains
+        guard !isTapped else { return }
+        tapWrong()
+    }
 
-        let toRed = SKAction.run { [weak self] in
-            self?.baseCircle.fillColor = .red
-            self?.darkEdge.fillColor = UIColor.red.darker(by: 0.2)
-            self?.gradientOverlay.fillColor = UIColor.red.lighter(by: 0.1)
-        }
-        let wait = SKAction.wait(forDuration: 0.15)
-        let restore = SKAction.run { [weak self] in
-            guard let self = self else { return }
-            self.baseCircle.fillColor = originalColor
-            self.darkEdge.fillColor = originalColor.darker(by: 0.15)
-            self.gradientOverlay.fillColor = originalColor.lighter(by: 0.1)
-        }
+    // MARK: - Explosion Effect
 
-        let moveLeft = SKAction.moveBy(x: -8, y: 0, duration: 0.04)
-        let moveRight = SKAction.moveBy(x: 16, y: 0, duration: 0.08)
-        let moveCenter = SKAction.moveBy(x: -8, y: 0, duration: 0.04)
-        let shake = SKAction.sequence([moveLeft, moveRight, moveCenter])
+    private enum ExplosionStyle {
+        case correct, wrong
+    }
 
-        run(SKAction.group([
-            SKAction.sequence([toRed, wait, restore]),
-            shake
+    private func explode(particleColor: UIColor, burstColor: UIColor, style: ExplosionStyle) {
+        guard let parent = self.parent else { return }
+        let worldPos = position
+
+        // 1. Quick scale-up flash
+        let flash = SKAction.scale(to: 1.4, duration: 0.06)
+        flash.timingMode = .easeOut
+
+        // 2. Fade out the ball itself
+        let disappear = SKAction.group([
+            SKAction.scale(to: 0.1, duration: 0.12),
+            SKAction.fadeOut(withDuration: 0.1)
+        ])
+
+        run(SKAction.sequence([flash, disappear]))
+
+        // 3. Burst ring (comic book style expanding circle)
+        let ringRadius = radius * 2.5
+        let ring = SKShapeNode(circleOfRadius: ringRadius)
+        ring.strokeColor = burstColor.withAlphaComponent(0.8)
+        ring.fillColor = .clear
+        ring.lineWidth = style == .correct ? 3 : 2
+        ring.position = worldPos
+        ring.setScale(0.3)
+        ring.alpha = 0.9
+        ring.zPosition = 100
+        parent.addChild(ring)
+
+        let expandRing = SKAction.scale(to: 1.2, duration: 0.2)
+        expandRing.timingMode = .easeOut
+        let fadeRing = SKAction.fadeOut(withDuration: 0.15)
+        ring.run(SKAction.sequence([
+            SKAction.group([expandRing, fadeRing]),
+            SKAction.removeFromParent()
         ]))
+
+        // 4. Particle burst — small colored circles flying outward
+        let particleCount = style == .correct ? 10 : 6
+        for i in 0..<particleCount {
+            let angle = (CGFloat(i) / CGFloat(particleCount)) * .pi * 2
+                + CGFloat.random(in: -0.3...0.3)
+
+            let particleSize = CGFloat.random(in: 3...7)
+            let particle = SKShapeNode(circleOfRadius: particleSize)
+            particle.fillColor = i % 3 == 0 ? .white : particleColor
+            particle.strokeColor = .clear
+            particle.position = worldPos
+            particle.alpha = 0.9
+            particle.zPosition = 101
+            parent.addChild(particle)
+
+            let distance = radius * CGFloat.random(in: 1.5...3.0)
+            let dx = cos(angle) * distance
+            let dy = sin(angle) * distance
+            let dur = Double.random(in: 0.15...0.3)
+
+            let move = SKAction.moveBy(x: dx, y: dy, duration: dur)
+            move.timingMode = .easeOut
+            let fade = SKAction.fadeOut(withDuration: dur * 0.8)
+            let shrink = SKAction.scale(to: 0.2, duration: dur)
+
+            particle.run(SKAction.sequence([
+                SKAction.group([move, fade, shrink]),
+                SKAction.removeFromParent()
+            ]))
+        }
+
+        // 5. Comic "starburst" spikes (correct only)
+        if style == .correct {
+            let spikeCount = 6
+            for i in 0..<spikeCount {
+                let angle = (CGFloat(i) / CGFloat(spikeCount)) * .pi * 2
+
+                let spike = SKShapeNode()
+                let path = CGMutablePath()
+                // Thin triangle spike
+                let length = radius * 1.8
+                let width: CGFloat = 3
+                path.move(to: CGPoint(x: 0, y: -width))
+                path.addLine(to: CGPoint(x: length, y: 0))
+                path.addLine(to: CGPoint(x: 0, y: width))
+                path.closeSubpath()
+                spike.path = path
+                spike.fillColor = UIColor.white.withAlphaComponent(0.7)
+                spike.strokeColor = .clear
+                spike.position = worldPos
+                spike.zRotation = angle
+                spike.setScale(0.3)
+                spike.alpha = 0.8
+                spike.zPosition = 99
+                parent.addChild(spike)
+
+                let expand = SKAction.scale(to: 1.0, duration: 0.1)
+                expand.timingMode = .easeOut
+                let fade = SKAction.group([
+                    SKAction.fadeOut(withDuration: 0.15),
+                    SKAction.scale(to: 1.5, duration: 0.15)
+                ])
+
+                spike.run(SKAction.sequence([expand, fade, SKAction.removeFromParent()]))
+            }
+        }
     }
 
     func animateAppear(delay: TimeInterval = 0) {

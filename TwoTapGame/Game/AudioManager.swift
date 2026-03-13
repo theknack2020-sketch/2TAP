@@ -1,27 +1,21 @@
 import AVFoundation
 import UIKit
 
-/// Manages all game audio with synthesized premium sound effects.
+/// Premium game audio via FM synthesis.
 ///
-/// Sound design approach:
-/// - Tap: soft, satisfying "pop" — layered harmonics with fast attack/decay
-/// - Success: bright ascending chime — two-note arpeggio with shimmer
-/// - Error: deep muted thud — low frequency with noise burst
-/// - Combo: quick rising tone — pitch sweep
-/// - Life lost: descending tone — sad but not harsh
-///
-/// All sounds generated programmatically via additive synthesis.
+/// FM (Frequency Modulation) synthesis creates rich, bell-like timbres
+/// that simple additive synthesis can't achieve. A modulator oscillator
+/// modulates the frequency of a carrier, creating complex sidebands.
 @MainActor
 final class AudioManager {
     static let shared = AudioManager()
 
-    private var tapPlayer: AVAudioPlayer?
-    private var errorPlayer: AVAudioPlayer?
-    private var successPlayer: AVAudioPlayer?
-    private var comboPlayer: AVAudioPlayer?
-    private var lifeLostPlayer: AVAudioPlayer?
-
+    private var players: [SoundType: AVAudioPlayer] = [:]
     private let sampleRate: Double = 44100
+
+    enum SoundType {
+        case tap, correctTap, wrongTap, success, combo, lifeLost, gameOver
+    }
 
     private init() {
         do {
@@ -31,227 +25,206 @@ final class AudioManager {
             print("⚠️ Audio session setup failed: \(error)")
         }
 
-        tapPlayer = generateTapSound()
-        successPlayer = generateSuccessSound()
-        errorPlayer = generateErrorSound()
-        comboPlayer = generateComboSound()
-        lifeLostPlayer = generateLifeLostSound()
+        players[.tap] = generateTap()
+        players[.correctTap] = generateCorrectTap()
+        players[.wrongTap] = generateWrongTap()
+        players[.success] = generateSuccess()
+        players[.combo] = generateCombo()
+        players[.lifeLost] = generateLifeLost()
+        players[.gameOver] = generateGameOver()
     }
 
-    // MARK: - Playback
+    // MARK: - Public API
 
-    func playTap() {
+    func playTap()        { play(.tap) }
+    func playCorrectTap() { play(.correctTap) }
+    func playWrongTap()   { play(.wrongTap) }
+    func playSuccess()    { play(.success) }
+    func playError()      { play(.wrongTap) }
+    func playCombo()      { play(.combo) }
+    func playLifeLost()   { play(.lifeLost) }
+    func playGameOver()   { play(.gameOver) }
+
+    private func play(_ type: SoundType) {
         guard SettingsManager.shared.soundEnabled else { return }
-        tapPlayer?.currentTime = 0
-        tapPlayer?.play()
+        guard let player = players[type] else { return }
+        player.currentTime = 0
+        player.play()
     }
 
-    func playSuccess() {
-        guard SettingsManager.shared.soundEnabled else { return }
-        successPlayer?.currentTime = 0
-        successPlayer?.play()
+    // MARK: - FM Synthesis Core
+
+    /// FM synthesis: carrier frequency modulated by modulator.
+    /// Creates bell-like, metallic, or percussive timbres depending on parameters.
+    private func fmSample(
+        t: Double,
+        carrierFreq: Double,
+        modFreq: Double,
+        modIndex: Double,
+        envelope: Double
+    ) -> Double {
+        let modulator = sin(2.0 * .pi * modFreq * t) * modIndex
+        return sin(2.0 * .pi * carrierFreq * t + modulator) * envelope
     }
 
-    func playError() {
-        guard SettingsManager.shared.soundEnabled else { return }
-        errorPlayer?.currentTime = 0
-        errorPlayer?.play()
-    }
-
-    func playCombo() {
-        guard SettingsManager.shared.soundEnabled else { return }
-        comboPlayer?.currentTime = 0
-        comboPlayer?.play()
-    }
-
-    func playLifeLost() {
-        guard SettingsManager.shared.soundEnabled else { return }
-        lifeLostPlayer?.currentTime = 0
-        lifeLostPlayer?.play()
-    }
-
-    // MARK: - Sound Synthesis
-
-    /// Tap: satisfying soft pop — fundamental + octave harmonic, fast ADSR, slight pitch drop
-    private func generateTapSound() -> AVAudioPlayer? {
-        let duration = 0.12
-        let numSamples = Int(sampleRate * duration)
-        var samples = [Float](repeating: 0, count: numSamples)
-
-        for i in 0..<numSamples {
-            let t = Double(i) / sampleRate
-
-            // ADSR: instant attack, fast decay
-            let attack: Double = 0.005
-            let decay: Double = 0.08
-            let env: Double
-            if t < attack {
-                env = t / attack
-            } else {
-                env = exp(-(t - attack) / decay * 4.0)
-            }
-
-            // Slight pitch drop for "pop" feel (660Hz → 580Hz)
-            let freq = 660.0 - (t / duration) * 80.0
-
-            // Fundamental + soft octave + quiet fifth
-            let fundamental = sin(2.0 * .pi * freq * t)
-            let octave = sin(2.0 * .pi * freq * 2.0 * t) * 0.3
-            let fifth = sin(2.0 * .pi * freq * 1.5 * t) * 0.1
-
-            // Tiny noise burst at start for "click" texture
-            let noise = t < 0.008 ? (Double.random(in: -1...1) * 0.15 * (1.0 - t / 0.008)) : 0
-
-            samples[i] = Float((fundamental + octave + fifth + noise) * env * 0.35)
+    /// Percussive envelope: instant attack, controlled decay.
+    private func percEnvelope(t: Double, attack: Double = 0.003, decay: Double) -> Double {
+        if t < attack {
+            return t / attack
         }
+        return exp(-(t - attack) / decay * 3.0)
+    }
 
+    /// Two-stage envelope for multi-note sounds.
+    private func noteEnvelope(t: Double, attack: Double = 0.005, hold: Double, release: Double) -> Double {
+        if t < attack {
+            return t / attack
+        } else if t < attack + hold {
+            return 1.0
+        } else {
+            return exp(-(t - attack - hold) / release * 3.0)
+        }
+    }
+
+    // MARK: - Sound Designs
+
+    /// Tap on any ball: crisp, short, tactile "tick"
+    /// FM with high mod ratio → metallic click
+    private func generateTap() -> AVAudioPlayer? {
+        let duration = 0.06
+        let samples = synthesize(duration: duration) { t in
+            let env = self.percEnvelope(t: t, decay: 0.025)
+            // High carrier, high ratio → crisp metallic tick
+            let fm = self.fmSample(t: t, carrierFreq: 2200, modFreq: 4400, modIndex: 1.5 * env, envelope: env)
+            // Tiny filtered click layer
+            let click = t < 0.004 ? (1.0 - t / 0.004) * 0.3 : 0
+            return (fm * 0.4 + click) * 0.35
+        }
         return makePlayer(from: samples)
     }
 
-    /// Success: bright two-note ascending chime with shimmer
-    private func generateSuccessSound() -> AVAudioPlayer? {
-        let duration = 0.28
-        let numSamples = Int(sampleRate * duration)
-        var samples = [Float](repeating: 0, count: numSamples)
-
-        for i in 0..<numSamples {
-            let t = Double(i) / sampleRate
-
-            // Two notes: C6 (1047Hz) then E6 (1319Hz)
-            let noteSwitch = 0.12
-            let freq: Double
-            let noteStart: Double
-
-            if t < noteSwitch {
-                freq = 1047.0
-                noteStart = 0.0
-            } else {
-                freq = 1319.0
-                noteStart = noteSwitch
-            }
-
-            let noteT = t - noteStart
-
-            // Per-note envelope: fast attack, gentle sustain, soft release
-            let attack: Double = 0.008
-            let sustain: Double = 0.06
-            let env: Double
-            if noteT < attack {
-                env = noteT / attack
-            } else if noteT < sustain {
-                env = 1.0
-            } else {
-                env = exp(-(noteT - sustain) * 8.0)
-            }
-
-            // Sine + shimmer (detuned pair for chorus effect)
-            let main = sin(2.0 * .pi * freq * t)
-            let detune = sin(2.0 * .pi * (freq * 1.003) * t) * 0.5 // slight detune
-            let octaveUp = sin(2.0 * .pi * freq * 2.0 * t) * 0.15  // sparkle
-
-            samples[i] = Float((main + detune + octaveUp) * env * 0.28)
+    /// Correct match tap: bright, satisfying "pling" — bell-like FM
+    private func generateCorrectTap() -> AVAudioPlayer? {
+        let duration = 0.18
+        let samples = synthesize(duration: duration) { t in
+            let env = self.percEnvelope(t: t, decay: 0.08)
+            // Bell-like: carrier:mod ratio near 1:1.4 (inharmonic = bell)
+            let bell = self.fmSample(t: t, carrierFreq: 1318, modFreq: 1845, modIndex: 2.0 * env, envelope: env)
+            // Bright shimmer layer
+            let shimmer = self.fmSample(t: t, carrierFreq: 2636, modFreq: 3690, modIndex: 0.8 * env, envelope: env * 0.3)
+            return (bell + shimmer) * 0.3
         }
-
         return makePlayer(from: samples)
     }
 
-    /// Error: muted low thud — not harsh, but clearly "wrong"
-    private func generateErrorSound() -> AVAudioPlayer? {
-        let duration = 0.22
-        let numSamples = Int(sampleRate * duration)
-        var samples = [Float](repeating: 0, count: numSamples)
-
-        for i in 0..<numSamples {
-            let t = Double(i) / sampleRate
-
-            // Envelope: punchy attack, medium decay
-            let attack: Double = 0.01
-            let env: Double
-            if t < attack {
-                env = t / attack
-            } else {
-                env = exp(-(t - attack) * 6.0)
-            }
-
-            // Low fundamental with pitch drop (180Hz → 110Hz)
-            let freq = 180.0 - (t / duration) * 70.0
-
-            // Warm low tone — fundamental + sub-octave, no harsh harmonics
-            let fundamental = sin(2.0 * .pi * freq * t)
-            let subOctave = sin(2.0 * .pi * freq * 0.5 * t) * 0.5
-
-            // Filtered noise burst at very start
-            let noiseBurst = t < 0.015 ? (Double.random(in: -1...1) * 0.2 * (1.0 - t / 0.015)) : 0
-
-            // Low-pass feel: triangle wave adds warmth without harshness
-            let phase = fmod(freq * t, 1.0)
-            let triangle = (phase < 0.5 ? (4.0 * phase - 1.0) : (3.0 - 4.0 * phase)) * 0.2
-
-            samples[i] = Float((fundamental + subOctave + triangle + noiseBurst) * env * 0.35)
-        }
-
-        return makePlayer(from: samples)
-    }
-
-    /// Combo: quick bright rising sweep
-    private func generateComboSound() -> AVAudioPlayer? {
+    /// Wrong tap: short dull thump — low FM, fast decay
+    private func generateWrongTap() -> AVAudioPlayer? {
         let duration = 0.15
-        let numSamples = Int(sampleRate * duration)
-        var samples = [Float](repeating: 0, count: numSamples)
-
-        for i in 0..<numSamples {
-            let t = Double(i) / sampleRate
-
-            let env = exp(-t * 12.0) // very fast decay
-
-            // Rising pitch sweep (800Hz → 1600Hz)
-            let freq = 800.0 + (t / duration) * 800.0
-
-            let wave = sin(2.0 * .pi * freq * t)
-            let harmonic = sin(2.0 * .pi * freq * 2.0 * t) * 0.2
-
-            samples[i] = Float((wave + harmonic) * env * 0.25)
+        let samples = synthesize(duration: duration) { t in
+            let env = self.percEnvelope(t: t, decay: 0.05)
+            // Low carrier, mod index drops fast → starts buzzy, ends clean
+            let modIdx = 4.0 * exp(-t * 30)
+            let thump = self.fmSample(t: t, carrierFreq: 150, modFreq: 210, modIndex: modIdx, envelope: env)
+            // Sub bass
+            let sub = sin(2.0 * .pi * 80 * t) * env * 0.4
+            return (thump + sub) * 0.4
         }
-
         return makePlayer(from: samples)
     }
 
-    /// Life lost: sad descending tone — two notes going down
-    private func generateLifeLostSound() -> AVAudioPlayer? {
-        let duration = 0.35
-        let numSamples = Int(sampleRate * duration)
-        var samples = [Float](repeating: 0, count: numSamples)
+    /// Round success: ascending two-note chime, bell FM timbre
+    private func generateSuccess() -> AVAudioPlayer? {
+        let duration = 0.32
+        let samples = synthesize(duration: duration) { t in
+            // Note 1: E6 (1318Hz) at t=0
+            // Note 2: A6 (1760Hz) at t=0.13 — perfect fourth up, bright and happy
+            var out = 0.0
 
-        for i in 0..<numSamples {
-            let t = Double(i) / sampleRate
-
-            // Descending pitch (523Hz → 330Hz) — C5 to E4
-            let freq = 523.0 - (t / duration) * 193.0
-
-            // Slow envelope — gentle fade
-            let attack: Double = 0.02
-            let env: Double
-            if t < attack {
-                env = t / attack
-            } else {
-                env = exp(-(t - attack) * 3.5)
+            // Note 1
+            if t < 0.22 {
+                let env1 = self.noteEnvelope(t: t, hold: 0.04, release: 0.06)
+                out += self.fmSample(t: t, carrierFreq: 1318, modFreq: 1845, modIndex: 1.8 * env1, envelope: env1)
             }
 
-            let fundamental = sin(2.0 * .pi * freq * t)
-            let softHarmonic = sin(2.0 * .pi * freq * 1.5 * t) * 0.15 // minor feel
+            // Note 2
+            if t >= 0.10 {
+                let t2 = t - 0.10
+                let env2 = self.noteEnvelope(t: t2, hold: 0.04, release: 0.08)
+                out += self.fmSample(t: t2, carrierFreq: 1760, modFreq: 2464, modIndex: 1.5 * env2, envelope: env2)
+            }
 
-            samples[i] = Float((fundamental + softHarmonic) * env * 0.3)
+            return out * 0.28
         }
-
         return makePlayer(from: samples)
     }
 
-    // MARK: - WAV Infrastructure
+    /// Combo streak: quick bright ascending sweep with FM shimmer
+    private func generateCombo() -> AVAudioPlayer? {
+        let duration = 0.14
+        let samples = synthesize(duration: duration) { t in
+            let env = self.percEnvelope(t: t, decay: 0.06)
+            // Rising carrier frequency
+            let freq = 1200.0 + (t / duration) * 1200.0
+            let fm = self.fmSample(t: t, carrierFreq: freq, modFreq: freq * 1.5, modIndex: 1.2 * env, envelope: env)
+            return fm * 0.25
+        }
+        return makePlayer(from: samples)
+    }
+
+    /// Life lost: descending minor third, gentle FM
+    private func generateLifeLost() -> AVAudioPlayer? {
+        let duration = 0.35
+        let samples = synthesize(duration: duration) { t in
+            var out = 0.0
+
+            // Note 1: E5 (659Hz)
+            if t < 0.2 {
+                let env1 = self.noteEnvelope(t: t, hold: 0.06, release: 0.05)
+                out += self.fmSample(t: t, carrierFreq: 659, modFreq: 923, modIndex: 1.0 * env1, envelope: env1)
+            }
+
+            // Note 2: C5 (523Hz) — minor third down = sad
+            if t >= 0.14 {
+                let t2 = t - 0.14
+                let env2 = self.noteEnvelope(t: t2, hold: 0.06, release: 0.06)
+                out += self.fmSample(t: t2, carrierFreq: 523, modFreq: 732, modIndex: 0.8 * env2, envelope: env2)
+            }
+
+            return out * 0.25
+        }
+        return makePlayer(from: samples)
+    }
+
+    /// Game over: low descending chord, longer tail
+    private func generateGameOver() -> AVAudioPlayer? {
+        let duration = 0.6
+        let samples = synthesize(duration: duration) { t in
+            let env = self.percEnvelope(t: t, attack: 0.02, decay: 0.2)
+            // Descending pitch
+            let freq = 440.0 - (t / duration) * 200.0
+            let fm = self.fmSample(t: t, carrierFreq: freq, modFreq: freq * 1.41, modIndex: 2.0 * env, envelope: env)
+            let low = self.fmSample(t: t, carrierFreq: freq * 0.5, modFreq: freq * 0.7, modIndex: 1.0 * env, envelope: env * 0.5)
+            return (fm + low) * 0.3
+        }
+        return makePlayer(from: samples)
+    }
+
+    // MARK: - Infrastructure
+
+    private func synthesize(duration: Double, generator: (Double) -> Double) -> [Float] {
+        let numSamples = Int(sampleRate * duration)
+        var samples = [Float](repeating: 0, count: numSamples)
+        for i in 0..<numSamples {
+            let t = Double(i) / sampleRate
+            samples[i] = Float(generator(t))
+        }
+        return samples
+    }
 
     private func makePlayer(from samples: [Float]) -> AVAudioPlayer? {
-        guard let wavData = createWAVData(samples: samples) else { return nil }
+        guard let data = createWAVData(samples: samples) else { return nil }
         do {
-            let player = try AVAudioPlayer(data: wavData)
+            let player = try AVAudioPlayer(data: data)
             player.prepareToPlay()
             return player
         } catch {
@@ -260,48 +233,34 @@ final class AudioManager {
         }
     }
 
-    /// Creates a minimal WAV file in memory from float samples.
     private func createWAVData(samples: [Float]) -> Data? {
         let sr = Int(sampleRate)
         let numChannels: Int16 = 1
         let bitsPerSample: Int16 = 16
-        let byteRate = Int32(sr * Int(numChannels) * Int(bitsPerSample / 8))
-        let blockAlign = Int16(numChannels * (bitsPerSample / 8))
-        let dataSize = Int32(samples.count * Int(bitsPerSample / 8))
+        let byteRate = Int32(sr * 2)
+        let blockAlign: Int16 = 2
+        let dataSize = Int32(samples.count * 2)
         let fileSize = 36 + dataSize
 
         var data = Data()
+        data.reserveCapacity(44 + samples.count * 2)
 
-        // RIFF header
-        data.append(contentsOf: "RIFF".utf8)
-        data.append(withUnsafeBytes(of: fileSize.littleEndian) { Data($0) })
+        func append32(_ v: Int32) { data.append(withUnsafeBytes(of: v.littleEndian) { Data($0) }) }
+        func append16(_ v: Int16) { data.append(withUnsafeBytes(of: v.littleEndian) { Data($0) }) }
+
+        data.append(contentsOf: "RIFF".utf8); append32(fileSize)
         data.append(contentsOf: "WAVE".utf8)
-
-        // fmt chunk
-        data.append(contentsOf: "fmt ".utf8)
-        data.append(withUnsafeBytes(of: Int32(16).littleEndian) { Data($0) })
-        data.append(withUnsafeBytes(of: Int16(1).littleEndian) { Data($0) })
-        data.append(withUnsafeBytes(of: numChannels.littleEndian) { Data($0) })
-        data.append(withUnsafeBytes(of: Int32(sr).littleEndian) { Data($0) })
-        data.append(withUnsafeBytes(of: byteRate.littleEndian) { Data($0) })
-        data.append(withUnsafeBytes(of: blockAlign.littleEndian) { Data($0) })
-        data.append(withUnsafeBytes(of: bitsPerSample.littleEndian) { Data($0) })
-
-        // data chunk
-        data.append(contentsOf: "data".utf8)
-        data.append(withUnsafeBytes(of: dataSize.littleEndian) { Data($0) })
+        data.append(contentsOf: "fmt ".utf8); append32(16)
+        append16(1); append16(numChannels)
+        append32(Int32(sr)); append32(byteRate)
+        append16(blockAlign); append16(bitsPerSample)
+        data.append(contentsOf: "data".utf8); append32(dataSize)
 
         for sample in samples {
             let clamped = max(-1.0, min(1.0, sample))
-            let intSample = Int16(clamped * Float(Int16.max))
-            data.append(withUnsafeBytes(of: intSample.littleEndian) { Data($0) })
+            append16(Int16(clamped * Float(Int16.max)))
         }
 
         return data
     }
-
-    // MARK: - Music (placeholder)
-
-    func startMusic() {}
-    func stopMusic() {}
 }
