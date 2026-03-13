@@ -89,6 +89,23 @@ class BallNode: SKNode {
         addChild(gradientOverlay)
         addChild(specularHighlight)
         addChild(secondaryHighlight)
+
+        // Physics body — for billiard-style wall bouncing
+        let body = SKPhysicsBody(circleOfRadius: radius)
+        body.isDynamic = true
+        body.friction = 0
+        body.restitution = 1.0       // perfect bounce off walls
+        body.linearDamping = 0       // no slowdown
+        body.angularDamping = 0
+        body.allowsRotation = false
+        body.mass = 1.0
+
+        // Category: ball. Collide with walls only, not other balls.
+        body.categoryBitMask =    0x1  // ball
+        body.collisionBitMask =   0x2  // walls only
+        body.contactTestBitMask = 0x0  // no contact events needed
+
+        self.physicsBody = body
     }
 
     required init?(coder aDecoder: NSCoder) {
@@ -136,6 +153,7 @@ class BallNode: SKNode {
 
     private func explode(particleColor: UIColor, burstColor: UIColor, style: ExplosionStyle) {
         guard let parent = self.parent else { return }
+        stopMoving() // freeze physics before explosion
         let worldPos = position
 
         // 1. Quick scale-up flash
@@ -251,45 +269,32 @@ class BallNode: SKNode {
             wait,
             SKAction.group([scaleIn, fadeIn]),
             SKAction.run { [weak self] in
-                self?.startDrift()
+                self?.startMoving()
                 self?.startShimmer()
             }
         ]))
     }
 
-    // MARK: - Zero-Gravity Drift
+    // MARK: - Billiard Physics
 
-    /// Gentle floating motion — balls slowly wander like in space.
-    /// Visible but not distracting: ~8-12pt total movement.
-    private func startDrift() {
-        // Each ball gets a unique random orbit
+    /// Give the ball a random initial velocity. It will bounce off walls via physics.
+    func startMoving() {
+        let speed = CGFloat.random(in: 25...50) // points per second — gentle
         let angle = CGFloat.random(in: 0...(2 * .pi))
-        let dist = CGFloat.random(in: 5...8)
-        let dx = cos(angle) * dist
-        let dy = sin(angle) * dist
-        let dur = Double.random(in: 1.8...2.8)
+        let vx = cos(angle) * speed
+        let vy = sin(angle) * speed
+        physicsBody?.velocity = CGVector(dx: vx, dy: vy)
+    }
 
-        let forward = SKAction.moveBy(x: dx, y: dy, duration: dur)
-        forward.timingMode = .easeInEaseOut
-        let back = SKAction.moveBy(x: -dx, y: -dy, duration: dur)
-        back.timingMode = .easeInEaseOut
-
-        run(SKAction.repeatForever(SKAction.sequence([forward, back])), withKey: "drift")
-
-        // Also add a very slow rotation wobble
-        let wobbleAngle = CGFloat.random(in: 0.02...0.05)
-        let wobbleDur = Double.random(in: 2.5...3.5)
-        let wobble = SKAction.sequence([
-            SKAction.rotate(byAngle: wobbleAngle, duration: wobbleDur),
-            SKAction.rotate(byAngle: -wobbleAngle, duration: wobbleDur)
-        ])
-        run(SKAction.repeatForever(wobble), withKey: "wobble")
+    /// Stop all physics movement (for when ball is tapped/removed).
+    func stopMoving() {
+        physicsBody?.velocity = .zero
+        physicsBody?.isDynamic = false
     }
 
     // MARK: - Specular Shimmer
 
-    /// The specular highlight slowly drifts across the ball surface,
-    /// simulating dynamic light reflection on metal.
+    /// The specular highlight slowly drifts across the ball surface.
     private func startShimmer() {
         let dx = CGFloat.random(in: -3...3)
         let dy = CGFloat.random(in: -2...2)
@@ -302,7 +307,6 @@ class BallNode: SKNode {
         shift.timingMode = .easeInEaseOut
         specularHighlight.run(SKAction.repeatForever(shift), withKey: "shimmer")
 
-        // Pulse the highlight brightness
         let pulse = SKAction.sequence([
             SKAction.fadeAlpha(to: 0.3, duration: dur * 0.7),
             SKAction.fadeAlpha(to: 0.6, duration: dur * 0.7)

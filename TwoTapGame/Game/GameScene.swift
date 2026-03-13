@@ -32,6 +32,32 @@ class GameScene: SKScene {
     override func didMove(to view: SKView) {
         backgroundColor = .clear
         scaleMode = .resizeFill
+        setupWalls()
+        physicsWorld.gravity = .zero
+    }
+
+    /// Create wall boundaries so balls bounce off screen edges.
+    /// Inset slightly so balls don't clip the edge visually.
+    private func setupWalls() {
+        // Remove old walls if resized
+        childNode(withName: "walls")?.removeFromParent()
+
+        let inset: CGFloat = 4
+        let rect = CGRect(
+            x: inset, y: inset,
+            width: size.width - inset * 2,
+            height: size.height - inset * 2
+        )
+        let wallBody = SKPhysicsBody(edgeLoopFrom: rect)
+        wallBody.friction = 0
+        wallBody.restitution = 1.0
+        wallBody.categoryBitMask = 0x2   // wall
+        wallBody.collisionBitMask = 0x1  // collide with balls
+
+        let wallNode = SKNode()
+        wallNode.name = "walls"
+        wallNode.physicsBody = wallBody
+        addChild(wallNode)
     }
 
     // MARK: - Round Management
@@ -128,6 +154,7 @@ class GameScene: SKScene {
         let group = DispatchGroup()
 
         for node in ballNodes {
+            node.stopMoving()
             group.enter()
             node.animateDisappear {
                 node.removeFromParent()
@@ -145,6 +172,7 @@ class GameScene: SKScene {
     /// Clear all ball nodes immediately (no animation).
     private func clearBallsImmediate() {
         for node in ballNodes {
+            node.stopMoving()
             node.removeFromParent()
         }
         ballNodes.removeAll()
@@ -205,6 +233,9 @@ class GameScene: SKScene {
     }
 
     override func update(_ currentTime: TimeInterval) {
+        // Always run ball repulsion while balls exist
+        applyBallRepulsion()
+
         guard timerActive else { return }
         guard localPhase == .playing else { return }
 
@@ -229,6 +260,51 @@ class GameScene: SKScene {
             timerActive = false
             // Don't set localPhase here — handleRoundFailure will do it
             handleTimeout()
+        }
+    }
+
+    // MARK: - Ball Repulsion
+
+    /// Applies soft repulsion force between all ball pairs to prevent overlap.
+    /// No collision bitmask between balls — this is the separation mechanism.
+    private func applyBallRepulsion() {
+        let activeBalls = ballNodes.filter { !$0.isTapped }
+        guard activeBalls.count > 1 else { return }
+
+        for i in 0..<activeBalls.count {
+            for j in (i + 1)..<activeBalls.count {
+                let a = activeBalls[i]
+                let b = activeBalls[j]
+
+                let dx = b.position.x - a.position.x
+                let dy = b.position.y - a.position.y
+                let dist = sqrt(dx * dx + dy * dy)
+
+                let minDist = a.radius + b.radius + 8 // 8pt buffer gap
+                guard dist < minDist && dist > 0.1 else { continue }
+
+                // Normalize direction
+                let nx = dx / dist
+                let ny = dy / dist
+
+                // Repulsion force — stronger when closer
+                let overlap = minDist - dist
+                let force = overlap * 2.5 // smooth push
+
+                a.physicsBody?.applyForce(CGVector(dx: -nx * force, dy: -ny * force))
+                b.physicsBody?.applyForce(CGVector(dx:  nx * force, dy:  ny * force))
+            }
+        }
+
+        // Clamp max speed to keep it chill
+        let maxSpeed: CGFloat = 60
+        for ball in activeBalls {
+            guard let body = ball.physicsBody else { continue }
+            let speed = sqrt(body.velocity.dx * body.velocity.dx + body.velocity.dy * body.velocity.dy)
+            if speed > maxSpeed {
+                let scale = maxSpeed / speed
+                body.velocity = CGVector(dx: body.velocity.dx * scale, dy: body.velocity.dy * scale)
+            }
         }
     }
 
