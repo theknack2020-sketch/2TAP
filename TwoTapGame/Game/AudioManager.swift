@@ -263,4 +263,65 @@ final class AudioManager {
 
         return data
     }
+
+    // MARK: - Music
+
+    private var musicPlayer: AVAudioPlayer?
+
+    func startMusic() {
+        guard SettingsManager.shared.musicEnabled else { return }
+        guard musicPlayer == nil || musicPlayer?.isPlaying != true else { return }
+
+        musicPlayer = generateAmbientLoop()
+        musicPlayer?.numberOfLoops = -1 // infinite loop
+        musicPlayer?.volume = 0.12 // subtle background
+        musicPlayer?.play()
+    }
+
+    func stopMusic() {
+        musicPlayer?.stop()
+        musicPlayer = nil
+    }
+
+    func updateMusicState() {
+        if SettingsManager.shared.musicEnabled {
+            startMusic()
+        } else {
+            stopMusic()
+        }
+    }
+
+    /// Ambient pad loop — warm, evolving chord drone.
+    /// Slow FM with detuned oscillators for a dreamy, non-distracting backdrop.
+    private func generateAmbientLoop() -> AVAudioPlayer? {
+        let duration = 8.0 // 8-second seamless loop
+        let samples = synthesize(duration: duration) { t in
+            // Gentle amplitude swell
+            let swell = 0.4 + 0.6 * (0.5 + 0.5 * sin(2.0 * .pi * t / duration))
+
+            // Root: C3 (130.8 Hz)
+            let c3 = self.fmSample(
+                t: t, carrierFreq: 130.8, modFreq: 130.8 * 1.002,
+                modIndex: 0.3 + 0.2 * sin(2.0 * .pi * t / 3.0), envelope: swell
+            )
+            // Fifth: G3 (196 Hz)
+            let g3 = self.fmSample(
+                t: t, carrierFreq: 196.0, modFreq: 196.0 * 0.998,
+                modIndex: 0.2 + 0.15 * sin(2.0 * .pi * t / 4.0), envelope: swell * 0.6
+            )
+            // Minor third: Eb4 (311 Hz)
+            let eb4 = self.fmSample(
+                t: t, carrierFreq: 311.0, modFreq: 311.0 * 1.003,
+                modIndex: 0.15 + 0.1 * sin(2.0 * .pi * t / 5.0), envelope: swell * 0.35
+            )
+            // Octave: C4 (261.6 Hz)
+            let c4 = self.fmSample(
+                t: t, carrierFreq: 261.6, modFreq: 261.6 * 0.999,
+                modIndex: 0.1, envelope: swell * 0.25
+            )
+
+            return (c3 + g3 + eb4 + c4) * 0.18
+        }
+        return makePlayer(from: samples)
+    }
 }

@@ -9,9 +9,9 @@ struct DifficultyEngine {
     /// Score thresholds and their corresponding ball counts.
     /// Each entry: (minimumScore, ballCount)
     private static let thresholds: [(score: Int, balls: Int)] = [
-        (0,     5),
-        (500,   6),
-        (1200,  7),
+        (0,     6),
+        (500,   7),
+        (1200,  8),
         (2500,  8),
         (4000,  9),
         (6000,  10),

@@ -31,14 +31,14 @@ final class ScoreEngineTests: XCTestCase {
 
 final class DifficultyEngineTests: XCTestCase {
 
-    func testStartsAt5Balls() {
-        XCTAssertEqual(DifficultyEngine.ballCount(forScore: 0), 5)
+    func testStartsAt6Balls() {
+        XCTAssertEqual(DifficultyEngine.ballCount(forScore: 0), 6)
     }
 
     func testIncreasesWithScore() {
-        XCTAssertEqual(DifficultyEngine.ballCount(forScore: 500), 6)
-        XCTAssertEqual(DifficultyEngine.ballCount(forScore: 1200), 7)
-        XCTAssertEqual(DifficultyEngine.ballCount(forScore: 2500), 8)
+        XCTAssertEqual(DifficultyEngine.ballCount(forScore: 500), 7)
+        XCTAssertEqual(DifficultyEngine.ballCount(forScore: 1200), 8)
+        XCTAssertEqual(DifficultyEngine.ballCount(forScore: 4000), 9)
     }
 
     func testRespectsMaxBalls() {

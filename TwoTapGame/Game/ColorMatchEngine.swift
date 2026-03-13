@@ -8,134 +8,151 @@ struct RoundColors {
     /// The color that is repeated (the one the player must find).
     let matchingColor: UIColor
 
-    /// How many times the matching color appears (2 or 3).
+    /// How many times the matching color appears (always 3).
     let matchCount: Int
 
     /// Indices of balls that have the matching color.
-    var matchingIndices: Set<Int> {
-        Set(assignments.enumerated().compactMap { index, color in
-            color == matchingColor ? index : nil
-        })
-    }
+    let matchingIndices: Set<Int>
 }
 
 /// Generates color assignments for each round.
 ///
 /// Rules:
-/// - Exactly one color repeats (2 or 3 times, per D005: max 3)
-/// - All other colors are unique
-/// - Colors within a round maintain minimum visual distance
+/// - Exactly 3 balls share the matching color
+/// - All other balls have unique, visually distinct colors
+/// - No two non-matching colors look similar to the matching color
 struct ColorMatchEngine {
 
-    /// Minimum distance between any two colors in the same round (HSB space).
-    /// Higher = easier to distinguish. Range: 0.0-1.0
-    static let defaultMinColorDistance: CGFloat = 0.15
+    /// Minimum HSB distance between any two colors in the same round.
+    /// 0.20 is quite strict — ensures clear visual separation.
+    static let defaultMinColorDistance: CGFloat = 0.20
 
     /// Generates a round's color assignment.
-    ///
-    /// - Parameters:
-    ///   - ballCount: Number of balls (5-12+)
-    ///   - palette: Color palette to draw from
-    ///   - minColorDistance: Minimum HSB distance between colors in the round (lower = harder)
-    /// - Returns: RoundColors with assignments and match info
     static func generateRound(
         ballCount: Int,
         palette: ColorPalette = .default,
         minColorDistance: CGFloat = defaultMinColorDistance
     ) -> RoundColors {
-        precondition(ballCount >= 5, "Need at least 5 balls (3 matching + 2 unique)")
-        precondition(palette.colors.count >= ballCount, "Palette needs at least \(ballCount) colors")
+        precondition(ballCount >= 4, "Need at least 4 balls")
 
-        // Always 3 matching balls — 2 is too easy with two hands
-        let effectiveMatchCount = 3
+        let matchCount = 3
+        let uniqueColorsNeeded = ballCount - matchCount + 1 // +1 for matching color itself
 
-        // Number of unique colors needed (one for the match + rest unique)
-        let uniqueColorsNeeded = ballCount - effectiveMatchCount + 1
-
-        // Pick colors with minimum distance enforcement
-        let selectedColors = selectDistinctColors(
+        // Try with distance enforcement
+        let selected = selectDistinctColors(
             count: uniqueColorsNeeded,
             from: palette.colors,
             minDistance: minColorDistance
         )
 
-        guard selectedColors.count == uniqueColorsNeeded else {
-            // Fallback: just use random colors if distance filtering is too strict
-            return generateRoundFallback(
-                ballCount: ballCount,
-                palette: palette,
-                matchCount: effectiveMatchCount
+        // If we got enough, use them
+        if selected.count == uniqueColorsNeeded {
+            return buildRound(
+                matchingColor: selected[0],
+                uniqueColors: Array(selected.dropFirst()),
+                matchCount: matchCount
             )
         }
 
-        // First color is the matching one
-        let matchingColor = selectedColors[0]
-        let uniqueColors = Array(selectedColors.dropFirst())
+        // Retry with relaxed distance
+        let relaxed = selectDistinctColors(
+            count: uniqueColorsNeeded,
+            from: palette.colors,
+            minDistance: minColorDistance * 0.6
+        )
 
-        // Build assignments: matchCount copies of matching + one each of unique
-        var assignments: [UIColor] = Array(repeating: matchingColor, count: effectiveMatchCount)
+        if relaxed.count == uniqueColorsNeeded {
+            return buildRound(
+                matchingColor: relaxed[0],
+                uniqueColors: Array(relaxed.dropFirst()),
+                matchCount: matchCount
+            )
+        }
+
+        // Last resort: pick any distinct colors (no distance check, but no duplicates)
+        let shuffled = palette.colors.shuffled()
+        let picked = Array(shuffled.prefix(uniqueColorsNeeded))
+        return buildRound(
+            matchingColor: picked[0],
+            uniqueColors: Array(picked.dropFirst()),
+            matchCount: matchCount
+        )
+    }
+
+    /// Build the RoundColors from selected colors.
+    private static func buildRound(
+        matchingColor: UIColor,
+        uniqueColors: [UIColor],
+        matchCount: Int
+    ) -> RoundColors {
+        var assignments: [UIColor] = Array(repeating: matchingColor, count: matchCount)
         assignments.append(contentsOf: uniqueColors)
-
-        // Shuffle so matching balls aren't always first
         assignments.shuffle()
+
+        // Compute matching indices explicitly (don't rely on color equality)
+        var matchIndices = Set<Int>()
+        var matchesFound = 0
+        for (i, color) in assignments.enumerated() {
+            // Use identity check — matching balls are the same instance
+            if color === matchingColor && matchesFound < matchCount {
+                matchIndices.insert(i)
+                matchesFound += 1
+            }
+        }
+
+        // Fallback: if identity check fails (shouldn't), use equality
+        if matchIndices.count != matchCount {
+            matchIndices.removeAll()
+            for (i, color) in assignments.enumerated() {
+                if color == matchingColor {
+                    matchIndices.insert(i)
+                }
+            }
+        }
 
         return RoundColors(
             assignments: assignments,
             matchingColor: matchingColor,
-            matchCount: effectiveMatchCount
+            matchCount: matchCount,
+            matchingIndices: matchIndices
         )
     }
 
-    // MARK: - Private
+    // MARK: - Color Selection
 
-    /// Select `count` colors from the palette that are at least `minDistance` apart in HSB space.
+    /// Select `count` colors that are at least `minDistance` apart.
+    /// Uses greedy selection from shuffled palette.
     private static func selectDistinctColors(
         count: Int,
         from palette: [UIColor],
         minDistance: CGFloat
     ) -> [UIColor] {
-        var shuffled = palette.shuffled()
-        var selected: [UIColor] = []
+        // Try multiple shuffles for better coverage
+        for _ in 0..<5 {
+            var candidates = palette.shuffled()
+            var selected: [UIColor] = []
 
-        while selected.count < count && !shuffled.isEmpty {
-            let candidate = shuffled.removeFirst()
+            while selected.count < count && !candidates.isEmpty {
+                let candidate = candidates.removeFirst()
 
-            let isFarEnough = selected.allSatisfy { existing in
-                colorDistance(candidate, existing) >= minDistance
+                let isFarEnough = selected.allSatisfy { existing in
+                    colorDistance(candidate, existing) >= minDistance
+                }
+
+                if isFarEnough {
+                    selected.append(candidate)
+                }
             }
 
-            if isFarEnough {
-                selected.append(candidate)
+            if selected.count == count {
+                return selected
             }
         }
 
-        return selected
+        return [] // couldn't find enough distinct colors
     }
 
-    /// Fallback round generation without color distance enforcement.
-    private static func generateRoundFallback(
-        ballCount: Int,
-        palette: ColorPalette,
-        matchCount: Int
-    ) -> RoundColors {
-        let shuffled = palette.colors.shuffled()
-        let uniqueNeeded = ballCount - matchCount + 1
-        let selectedColors = Array(shuffled.prefix(uniqueNeeded))
-
-        let matchingColor = selectedColors[0]
-        var assignments = Array(repeating: matchingColor, count: matchCount)
-        assignments.append(contentsOf: selectedColors.dropFirst())
-        assignments.shuffle()
-
-        return RoundColors(
-            assignments: assignments,
-            matchingColor: matchingColor,
-            matchCount: matchCount
-        )
-    }
-
-    /// HSB-space distance between two colors (0.0 to ~1.73).
-    /// Normalized to 0.0-1.0 range.
+    /// HSB-space perceptual distance between two colors (0.0 to 1.0).
     static func colorDistance(_ a: UIColor, _ b: UIColor) -> CGFloat {
         var h1: CGFloat = 0, s1: CGFloat = 0, b1: CGFloat = 0, a1: CGFloat = 0
         var h2: CGFloat = 0, s2: CGFloat = 0, b2: CGFloat = 0, a2: CGFloat = 0
@@ -143,19 +160,18 @@ struct ColorMatchEngine {
         a.getHue(&h1, saturation: &s1, brightness: &b1, alpha: &a1)
         b.getHue(&h2, saturation: &s2, brightness: &b2, alpha: &a2)
 
-        // Hue is circular (0.0 = 1.0), so use shortest arc
+        // Hue is circular — use shortest arc
         let hueDiff = min(abs(h1 - h2), 1.0 - abs(h1 - h2))
         let satDiff = abs(s1 - s2)
         let briDiff = abs(b1 - b2)
 
-        // Weighted: hue matters most, then saturation, then brightness
+        // Weighted euclidean: hue most important, then saturation, then brightness
         let distance = sqrt(
             hueDiff * hueDiff * 2.0 +
             satDiff * satDiff * 1.0 +
             briDiff * briDiff * 0.5
         )
 
-        // Normalize to 0.0-1.0 range (max theoretical ~1.87)
         return min(distance / 1.87, 1.0)
     }
 }

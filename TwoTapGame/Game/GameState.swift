@@ -64,7 +64,7 @@ final class GameState {
 
     // MARK: - Configuration
 
-    var ballCount: Int = 5
+    var ballCount: Int = 6
     var palette: ColorPalette = .default
 
     // MARK: - Computed
@@ -101,7 +101,7 @@ final class GameState {
         flashColor = .none
         isPaused = false
         pausesRemaining = 3
-        ballCount = 5
+        ballCount = 6
     }
 
     func markBallTapped(id: Int) {

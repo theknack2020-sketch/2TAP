@@ -6,7 +6,7 @@ final class ColorMatchEngineTests: XCTestCase {
     // MARK: - Basic Round Generation
 
     func testGeneratesCorrectBallCount() {
-        for count in [5, 6, 7, 8, 10, 12] {
+        for count in [6, 7, 8, 10, 12] {
             let round = ColorMatchEngine.generateRound(ballCount: count)
             XCTAssertEqual(
                 round.assignments.count, count,
@@ -139,8 +139,8 @@ final class ColorMatchEngineTests: XCTestCase {
     // MARK: - Edge Cases
 
     func testMinimumBallCount() {
-        let round = ColorMatchEngine.generateRound(ballCount: 5)
-        XCTAssertEqual(round.assignments.count, 5)
+        let round = ColorMatchEngine.generateRound(ballCount: 6)
+        XCTAssertEqual(round.assignments.count, 6)
         XCTAssertEqual(round.matchCount, 3)
     }
 
