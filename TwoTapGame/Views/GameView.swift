@@ -26,42 +26,51 @@ struct GameView: View {
             }
 
             // HUD Overlays
-            VStack {
-                // Timer bar at top
+            VStack(spacing: 0) {
+                // Spacer to push bar below status bar / notch area
+                Spacer()
+                    .frame(height: 60)
+
+                // Timer bar — with bubble effect
                 TimerBarView(progress: gameState.timerProgress)
-                    .padding(.horizontal)
-                    .padding(.top, 8)
+                    .padding(.horizontal, 20)
                     .opacity(gameState.phase == .playing ? 1 : 0)
 
-                Spacer()
-
-                // Score display at bottom
+                // Score (left) and Lives (right) — just below timer bar
                 HStack {
-                    Text("Score: \(gameState.score)")
-                        .font(.system(size: 18, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
-
-                    Spacer()
-
-                    // Round number
-                    Text("Round \(gameState.roundNumber)")
-                        .font(.system(size: 14, weight: .medium, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.5))
-
-                    Spacer()
-
-                    // Lives
+                    // Score on left
                     HStack(spacing: 4) {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.yellow)
+                        Text("\(gameState.score)")
+                            .font(.system(size: 16, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white)
+                    }
+
+                    Spacer()
+
+                    // Round in center
+                    Text("R\(gameState.roundNumber)")
+                        .font(.system(size: 13, weight: .medium, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.4))
+
+                    Spacer()
+
+                    // Lives on right
+                    HStack(spacing: 3) {
                         ForEach(0..<3, id: \.self) { index in
                             Image(systemName: index < gameState.lives ? "heart.fill" : "heart")
-                                .foregroundStyle(index < gameState.lives ? .red : .gray)
-                                .font(.system(size: 16))
+                                .foregroundStyle(index < gameState.lives ? .red : .gray.opacity(0.4))
+                                .font(.system(size: 14))
                         }
                     }
                 }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 8)
+                .padding(.horizontal, 24)
+                .padding(.top, 6)
                 .opacity(isHUDVisible ? 1 : 0)
+
+                Spacer()
             }
 
             // Countdown overlay

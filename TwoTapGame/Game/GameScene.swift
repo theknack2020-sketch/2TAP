@@ -296,35 +296,36 @@ class GameScene: SKScene {
     private func handleRoundFailure() {
         guard let state = gameState else { return }
         timerActive = false
+        removeAction(forKey: "nextRound")
 
         Task { @MainActor in
             state.phase = .failure
             state.combo = 0
             state.lives -= 1
 
-            if state.lives <= 0 {
-                // Game over — clear balls immediately
+            let livesLeft = state.lives
+
+            // Longer pause so player can see what happened
+            let delay: TimeInterval = livesLeft <= 0 ? 1.8 : 1.5
+
+            // Schedule next action on main thread after delay
+            try? await Task.sleep(for: .seconds(delay))
+
+            // Check we're still in failure phase (user might have restarted)
+            guard state.phase == .failure else { return }
+
+            if livesLeft <= 0 {
+                // Game over — clear balls, show overlay, do NOT auto-restart
                 self.clearBalls {
                     Task { @MainActor in
                         state.phase = .gameOver
                     }
                 }
-                return
-            }
-        }
-
-        // Brief pause, then clear balls → 2-1 countdown → next round
-        let nextAction = SKAction.sequence([
-            SKAction.wait(forDuration: 0.6),
-            SKAction.run { [weak self] in
-                guard let self = self, let state = self.gameState else { return }
-                Task { @MainActor in
-                    guard state.lives > 0 else { return }
-                }
+            } else {
+                // Continue — next round with countdown
                 self.startNextRound()
             }
-        ])
-        run(nextAction, withKey: "nextRound")
+        }
     }
 
     private func handleTimeout() {

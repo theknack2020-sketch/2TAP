@@ -34,28 +34,13 @@ final class ColorMatchEngineTests: XCTestCase {
         }
     }
 
-    func testMatchCountIs2Or3() {
-        var saw2 = false
-        var saw3 = false
-
+    func testMatchCountIsAlways3() {
         for _ in 0..<100 {
             let round = ColorMatchEngine.generateRound(ballCount: 7)
-            XCTAssertTrue(
-                round.matchCount == 2 || round.matchCount == 3,
-                "Match count must be 2 or 3, got \(round.matchCount)"
+            XCTAssertEqual(
+                round.matchCount, 3,
+                "Match count must always be 3, got \(round.matchCount)"
             )
-            if round.matchCount == 2 { saw2 = true }
-            if round.matchCount == 3 { saw3 = true }
-        }
-
-        XCTAssertTrue(saw2, "Should sometimes have 2 matches")
-        XCTAssertTrue(saw3, "Should sometimes have 3 matches")
-    }
-
-    func testMatchCountNeverExceeds3() {
-        for _ in 0..<100 {
-            let round = ColorMatchEngine.generateRound(ballCount: 7)
-            XCTAssertLessThanOrEqual(round.matchCount, 3)
         }
     }
 
@@ -154,9 +139,9 @@ final class ColorMatchEngineTests: XCTestCase {
     // MARK: - Edge Cases
 
     func testMinimumBallCount() {
-        let round = ColorMatchEngine.generateRound(ballCount: 3)
-        XCTAssertEqual(round.assignments.count, 3)
-        XCTAssertEqual(round.matchCount, 2) // 3 balls with match=3 means all same — forced to 2
+        let round = ColorMatchEngine.generateRound(ballCount: 5)
+        XCTAssertEqual(round.assignments.count, 5)
+        XCTAssertEqual(round.matchCount, 3)
     }
 
     func testLargeBallCount() {

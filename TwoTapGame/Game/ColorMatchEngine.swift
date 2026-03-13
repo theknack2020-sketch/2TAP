@@ -43,14 +43,11 @@ struct ColorMatchEngine {
         palette: ColorPalette = .default,
         minColorDistance: CGFloat = defaultMinColorDistance
     ) -> RoundColors {
-        precondition(ballCount >= 3, "Need at least 3 balls for a meaningful round")
+        precondition(ballCount >= 5, "Need at least 5 balls (3 matching + 2 unique)")
         precondition(palette.colors.count >= ballCount, "Palette needs at least \(ballCount) colors")
 
-        // Decide match count: 2 or 3 (weighted toward 2 for balance)
-        let matchCount = Int.random(in: 1...10) <= 7 ? 2 : 3
-
-        // If ball count is too small for 3 matches, force 2
-        let effectiveMatchCount = ballCount <= 4 ? 2 : matchCount
+        // Always 3 matching balls — 2 is too easy with two hands
+        let effectiveMatchCount = 3
 
         // Number of unique colors needed (one for the match + rest unique)
         let uniqueColorsNeeded = ballCount - effectiveMatchCount + 1
