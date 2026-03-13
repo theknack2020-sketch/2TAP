@@ -1,19 +1,18 @@
 # GSD State
 
 **Active Milestone:** M001 — 2TAP Game
-**Active Slice:** S01 — Core Game Engine
+**Active Slice:** S02 — Scoring, Lives & Game Polish
 **Active Task:** None (slice not yet planned)
-**Phase:** Planning S01
+**Phase:** Planning S02
 
 ## Recent Decisions
-- SwiftUI + SpriteKit hybrid architecture (D001)
-- 2-second timer is sacred, never changes (D004)
-- Max 3 same-color balls per round (D005)
-- Endless rounds, no level system (D007)
-- Gemini API build-time only for assets (D010)
+- Ball radius 20-38pt auto-calculated (BallPlacementEngine)
+- HSB color distance for round color selection
+- Timer via SpriteKit deltaTime, not Foundation Timer
+- GameState @Observable @MainActor as SpriteKit↔SwiftUI bridge
 
 ## Blockers
 - None
 
 ## Next Action
-Plan S01 (Core Game Engine) — decompose into tasks with must-haves, then execute.
+Plan S02 (Scoring, Lives & Game Polish) — decompose into tasks, then execute.

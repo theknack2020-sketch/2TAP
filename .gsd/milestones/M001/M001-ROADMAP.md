@@ -55,7 +55,7 @@ This milestone is complete only when all are true:
 
 ## Slices
 
-- [ ] **S01: Core Game Engine** `risk:high` `depends:[]`
+- [x] **S01: Core Game Engine** `risk:high` `depends:[]`
   > After this: Xcode project exists. Balls appear on screen with non-overlapping placement, 3-2-1 countdown plays, 2s timer bar counts down, tapping balls registers correctly, rounds cycle.
 
 - [ ] **S02: Scoring, Lives & Game Polish** `risk:medium` `depends:[S01]`
