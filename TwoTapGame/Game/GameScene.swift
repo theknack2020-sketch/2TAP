@@ -221,7 +221,7 @@ class GameScene: SKScene {
 
         if progress <= 0 {
             timerActive = false
-            localPhase = .failure
+            // Don't set localPhase here — handleRoundFailure will do it
             handleTimeout()
         }
     }
@@ -251,19 +251,23 @@ class GameScene: SKScene {
 
         node.tap()
 
-        Task { @MainActor in
-            AudioManager.shared.playTap()
-            state.markBallTapped(id: node.ballId)
+        if node.isMatch {
+            Task { @MainActor in
+                AudioManager.shared.playTap()
+                state.markBallTapped(id: node.ballId)
 
-            if node.isMatch {
                 if state.allMatchesTapped {
                     AudioManager.shared.playSuccess()
                     self.handleRoundSuccess()
                 }
-            } else {
+            }
+        } else {
+            // Wrong tap — handle failure synchronously on scene thread
+            node.showError()
+            handleRoundFailure()
+            Task { @MainActor in
                 AudioManager.shared.playError()
-                node.showError()
-                self.handleRoundFailure()
+                state.markBallTapped(id: node.ballId)
             }
         }
     }
@@ -311,16 +315,11 @@ class GameScene: SKScene {
 
     private func handleRoundFailure() {
         guard let state = gameState else { return }
-        guard localPhase == .playing || localPhase == .failure else { return }
+        guard localPhase == .playing else { return } // only fire once
 
-        // Only transition once — prevent double-fire from race
-        if localPhase == .playing {
-            timerActive = false
-            localPhase = .failure
-            removeAction(forKey: "nextRound")
-        } else {
-            return // already handling failure
-        }
+        timerActive = false
+        localPhase = .failure
+        removeAction(forKey: "nextRound")
 
         Task { @MainActor in
             state.phase = .failure
