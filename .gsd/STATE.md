@@ -1,18 +1,17 @@
 # GSD State
 
 **Active Milestone:** M001 — 2TAP Game
-**Active Slice:** S05 — Audio System
+**Active Slice:** S06 — AI Asset Generation
 **Active Task:** None (slice not yet planned)
-**Phase:** Planning S05
+**Phase:** Planning S06
 
 ## Recent Decisions
-- SettingsManager singleton with UserDefaults persistence
-- Dark/light/system theme via .preferredColorScheme
-- Palette selection persisted, applied at game start
-- Double-confirm alert for high score reset
+- Programmatic tone generation for sound effects (no bundled audio files needed)
+- AudioManager singleton, respects SettingsManager sound/music toggles
+- Background music deferred until actual audio files available
 
 ## Blockers
-- None
+- GEMINI_API_KEY needed for S06
 
 ## Next Action
-Plan and execute S05 (Audio System).
+Plan and execute S06 (AI Asset Generation with Gemini).

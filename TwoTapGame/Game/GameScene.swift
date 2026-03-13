@@ -243,6 +243,7 @@ class GameScene: SKScene {
         node.tap()
 
         Task { @MainActor in
+            AudioManager.shared.playTap()
             state.markBallTapped(id: node.ballId)
         }
 
@@ -250,12 +251,16 @@ class GameScene: SKScene {
             // Correct tap — check if all matches found
             Task { @MainActor in
                 if state.allMatchesTapped {
+                    AudioManager.shared.playSuccess()
                     self.handleRoundSuccess()
                 }
             }
         } else {
             // Wrong tap — round failure
             node.showError()
+            Task { @MainActor in
+                AudioManager.shared.playError()
+            }
             handleRoundFailure()
         }
     }
@@ -346,6 +351,9 @@ class GameScene: SKScene {
     }
 
     private func handleTimeout() {
+        Task { @MainActor in
+            AudioManager.shared.playError()
+        }
         handleRoundFailure()
     }
 

@@ -67,7 +67,7 @@ This milestone is complete only when all are true:
 - [x] **S04: Game Over & Persistence** `risk:low` `depends:[S02,S03]`
   > After this: Game over screen shows score summary (final score, best combo, rounds survived), replay and home buttons work, high score persists across app restarts, double-confirm score reset in settings.
 
-- [ ] **S05: Audio System** `risk:low` `depends:[S01]`
+- [x] **S05: Audio System** `risk:low` `depends:[S01]`
   > After this: Cartoon tap sound on ball touch, bomb sound on wrong/timeout, 10 background music loops play randomly, music toggleable in settings and via in-game icon.
 
 - [ ] **S06: AI Asset Generation** `risk:medium` `depends:[S03]`
