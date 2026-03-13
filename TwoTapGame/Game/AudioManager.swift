@@ -15,6 +15,9 @@ final class AudioManager: @unchecked Sendable {
     private let playerPool: [AVAudioPlayerNode]
     private let poolSize = 6  // concurrent sounds
 
+    // Mixer to combine all players before effects
+    private let playerMixer = AVAudioMixerNode()
+
     // Effect units — shared signal chain
     private let reverb = AVAudioUnitReverb()
     private let eq = AVAudioUnitEQ(numberOfBands: 3)
@@ -64,6 +67,7 @@ final class AudioManager: @unchecked Sendable {
         for player in playerPool {
             engine.attach(player)
         }
+        engine.attach(playerMixer)
         engine.attach(reverb)
         engine.attach(eq)
 
@@ -96,12 +100,13 @@ final class AudioManager: @unchecked Sendable {
         band2.gain = 1.5
         band2.bypass = false
 
-        // Signal chain: players → EQ → reverb → mainMixer
+        // Signal chain: players → playerMixer → EQ → reverb → mainMixer
         let mainMixer = engine.mainMixerNode
 
         for player in playerPool {
-            engine.connect(player, to: eq, format: format)
+            engine.connect(player, to: playerMixer, format: format)
         }
+        engine.connect(playerMixer, to: eq, format: format)
         engine.connect(eq, to: reverb, format: format)
         engine.connect(reverb, to: mainMixer, format: format)
 
