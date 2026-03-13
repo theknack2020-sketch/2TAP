@@ -12,28 +12,26 @@ final class GameCenterManager {
 
     private init() {}
 
-    /// Authenticate the local player. Call on app launch.
+    /// Silently check if the player is already signed into Game Center.
+    /// Never shows a login prompt — if they're not signed in, we just skip it.
     func authenticate() {
         GKLocalPlayer.local.authenticateHandler = { [weak self] viewController, error in
-            if let vc = viewController {
-                // Present the Game Center login if needed
-                if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                   let root = scene.windows.first?.rootViewController {
-                    root.present(vc, animated: true)
+            // Do NOT present the viewController — we don't force login
+            if viewController != nil {
+                // Player is not signed in; that's fine, skip GameCenter features
+                Task { @MainActor in
+                    self?.isAuthenticated = false
                 }
                 return
             }
 
             if let error {
-                print("⚠️ GameCenter auth failed: \(error.localizedDescription)")
+                print("⚠️ GameCenter: \(error.localizedDescription)")
                 return
             }
 
             Task { @MainActor in
                 self?.isAuthenticated = GKLocalPlayer.local.isAuthenticated
-                if GKLocalPlayer.local.isAuthenticated {
-                    print("✅ GameCenter authenticated: \(GKLocalPlayer.local.displayName)")
-                }
             }
         }
     }

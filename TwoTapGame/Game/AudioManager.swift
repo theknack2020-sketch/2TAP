@@ -6,9 +6,9 @@ import UIKit
 /// Architecture:
 /// - Each sound is pre-rendered as a PCM buffer
 /// - Played through AVAudioEngine with shared reverb + EQ chain
+/// - Thread-safe: all playback serialized on a dedicated audio queue
 /// - Result: studio-quality spatial audio, zero latency
-@MainActor
-final class AudioManager {
+final class AudioManager: @unchecked Sendable {
     static let shared = AudioManager()
 
     private let engine = AVAudioEngine()
@@ -18,20 +18,14 @@ final class AudioManager {
     // Effect units — shared signal chain
     private let reverb = AVAudioUnitReverb()
     private let eq = AVAudioUnitEQ(numberOfBands: 3)
-    private let compressor = AVAudioUnitEffect(audioComponentDescription:
-        AudioComponentDescription(
-            componentType: kAudioUnitType_Effect,
-            componentSubType: kAudioUnitSubType_DynamicsProcessor,
-            componentManufacturer: kAudioUnitManufacturer_Apple,
-            componentFlags: 0,
-            componentFlagsMask: 0
-        )
-    )
 
     private var buffers: [SoundType: AVAudioPCMBuffer] = [:]
     private var currentPlayerIndex = 0
     private let sampleRate: Double = 44100
     private let format: AVAudioFormat
+
+    /// Serial queue for thread-safe player access.
+    private let audioQueue = DispatchQueue(label: "com.ufuk.twotapgame.audio", qos: .userInteractive)
 
     enum SoundType: CaseIterable {
         case tap, correctTap, wrongTap, success, combo, lifeLost, gameOver
@@ -130,15 +124,18 @@ final class AudioManager {
     func playGameOver()   { play(.gameOver) }
 
     private func play(_ type: SoundType) {
-        guard SettingsManager.shared.soundEnabled else { return }
+        // Read sound preference directly from UserDefaults (thread-safe)
+        guard UserDefaults.standard.bool(forKey: "soundEnabled") else { return }
         guard let buffer = buffers[type] else { return }
 
-        let player = playerPool[currentPlayerIndex]
-        currentPlayerIndex = (currentPlayerIndex + 1) % poolSize
+        audioQueue.async { [self] in
+            let player = playerPool[currentPlayerIndex]
+            currentPlayerIndex = (currentPlayerIndex + 1) % poolSize
 
-        player.stop()
-        player.scheduleBuffer(buffer, at: nil, options: .interrupts)
-        player.play()
+            player.stop()
+            player.scheduleBuffer(buffer, at: nil, options: .interrupts)
+            player.play()
+        }
     }
 
     // MARK: - Sound Generation
