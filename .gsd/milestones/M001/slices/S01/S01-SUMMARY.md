@@ -2,77 +2,37 @@
 id: S01
 parent: M001
 provides:
-  - Xcode project with SwiftUI + SpriteKit (XcodeGen-based)
-  - BallPlacementEngine — non-overlapping random placement with finger-gap spacing
-  - ColorMatchEngine — round color generation with palette system (metallic/neon/pastel)
-  - GameScene — SpriteKit scene with ball rendering, touch detection, round cycling
-  - GameState — @Observable bridge between SpriteKit and SwiftUI
-  - TimerBarView + CountdownView — SwiftUI HUD overlays
-  - GameView — SpriteView wrapper with HUD
-requires:
-  - nothing (first slice)
-affects: [S02, S03, S04, S05]
+  - Fixed review prompt (totalGamesPlayed persisted via UserDefaults)
+  - Cancellable failure task (no race condition)
+  - GeometryReader-based scene sizing (no deprecated UIScreen.main)
+  - Removed musicEnabled dead code from AudioManager + SettingsManager
+  - Home button on pause overlay
+  - Empty-space taps no longer penalize
 key_files:
-  - TwoTapGame/Game/BallPlacementEngine.swift
-  - TwoTapGame/Game/ColorMatchEngine.swift
   - TwoTapGame/Game/GameScene.swift
-  - TwoTapGame/Game/GameState.swift
-  - TwoTapGame/Game/BallNode.swift
   - TwoTapGame/Views/GameView.swift
-  - TwoTapGame/Views/TimerBarView.swift
-  - TwoTapGame/Views/CountdownView.swift
-  - TwoTapGame/Models/ColorPalette.swift
-  - project.yml
+  - TwoTapGame/Models/SettingsManager.swift
+  - TwoTapGame/Game/AudioManager.swift
+  - TwoTapGame/Game/DifficultyEngine.swift
 key_decisions:
-  - "Ball radius 20-38pt range, auto-calculated per screen size and ball count"
-  - "Rejection sampling for placement with grid-based fallback"
-  - "HSB color distance for ensuring distinguishable colors per round"
-  - "GameState as @Observable @MainActor — single source of truth"
-  - "Timer driven by SpriteKit update loop deltaTime, not Foundation Timer"
+  - "D001: Only wrong-ball taps cost lives, not empty space"
+  - "D003: Review prompt uses settings.totalGamesPlayed (UserDefaults-persisted)"
+  - "D005: GeometryReader replaces UIScreen.main.bounds"
 patterns_established:
-  - "SpriteKit scene communicates to SwiftUI via @Observable GameState"
-  - "BallNode handles its own animations (appear, tap, celebrate, error)"
-  - "SwiftUI overlays (timer, countdown) on top of SpriteView in ZStack"
-  - "Engines are pure logic structs — no UI dependencies"
+  - "failureTask stored reference pattern for cancellable async work in GameScene"
 drill_down_paths:
   - .gsd/milestones/M001/slices/S01/tasks/T01-PLAN.md
   - .gsd/milestones/M001/slices/S01/tasks/T02-PLAN.md
-  - .gsd/milestones/M001/slices/S01/tasks/T03-PLAN.md
-  - .gsd/milestones/M001/slices/S01/tasks/T04-PLAN.md
-  - .gsd/milestones/M001/slices/S01/tasks/T05-PLAN.md
-duration: ~45min
 verification_result: pass
-completed_at: 2026-03-14T00:44:00Z
+completed_at: 2026-03-16T01:00:00Z
 ---
 
-# S01: Core Game Engine
+# S01: Bug Fixes & Critical UX
 
-**Foundational game engine: balls spawn non-overlapping with finger gaps, 3-2-1 countdown, 2s timer, touch detection with visual feedback, round cycling — deployed and running on device.**
+**Fixed 6 bugs and 2 critical UX issues — game is now fair and functional**
 
 ## What Happened
 
-Built the complete core game loop from empty project. XcodeGen scaffolds the project with SwiftUI + SpriteKit. BallPlacementEngine uses rejection sampling (with grid fallback) to place 5-12+ balls without overlap and with 44pt finger-gap spacing. ColorMatchEngine generates rounds where exactly one color repeats 2-3 times among unique colors, using HSB distance to ensure visual distinction. Three color palettes shipped: metallic (default), neon, pastel.
+Fixed the broken review prompt by using settings.totalGamesPlayed (already UserDefaults-persisted) instead of a @State counter that reset every view creation. Fixed the race condition in handleRoundFailure by storing the Task reference and cancelling it on startGame/stopGame. Replaced UIScreen.main.bounds with GeometryReader for scene sizing. Removed dead musicEnabled property and music stub methods. Added Home button to pause overlay. Removed empty-space tap penalty per D001 — only wrong-ball taps cost lives now.
 
-GameScene (SpriteKit) manages ball spawning, touch detection, timer via update loop deltaTime, and round state machine. GameState (@Observable) bridges SpriteKit and SwiftUI — timer progress, ball states, lives, score flow through it. SwiftUI overlays (TimerBarView, CountdownView) sit on top of SpriteView.
-
-App deployed to physical device via `xcrun devicectl`. All 22 unit tests pass.
-
-## Deviations
-- T04 and T05 were effectively merged — timer, countdown, and round cycling were natural extensions of the game scene implementation rather than separate tasks.
-- Ball rendering is basic circles with highlight spot — full 3D metallic shading deferred to S02 as planned.
-
-## Files Created/Modified
-- `project.yml` — XcodeGen config (iOS 17+, SpriteKit + AVFoundation)
-- `TwoTapGame/App/TwoTapGameApp.swift` — @main entry
-- `TwoTapGame/App/ContentView.swift` — root view → GameView
-- `TwoTapGame/Game/BallPlacementEngine.swift` — placement algorithm (215 lines)
-- `TwoTapGame/Game/ColorMatchEngine.swift` — color generation (168 lines)
-- `TwoTapGame/Game/GameScene.swift` — SpriteKit scene (280 lines)
-- `TwoTapGame/Game/GameState.swift` — @Observable state (85 lines)
-- `TwoTapGame/Game/BallNode.swift` — ball node with animations (130 lines)
-- `TwoTapGame/Views/GameView.swift` — SpriteView wrapper + HUD (120 lines)
-- `TwoTapGame/Views/TimerBarView.swift` — timer bar (40 lines)
-- `TwoTapGame/Views/CountdownView.swift` — countdown overlay (30 lines)
-- `TwoTapGame/Models/ColorPalette.swift` — 3 palettes (150 lines)
-- `TwoTapGameTests/BallPlacementEngineTests.swift` — 9 tests
-- `TwoTapGameTests/ColorMatchEngineTests.swift` — 12 tests
+All 30 existing tests pass. Build clean. Verified on iPhone 16 Pro simulator.

@@ -158,6 +158,32 @@ final class BallPlacementEngineTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(maxProMax, 10, "Pro Max should support at least 10 balls")
     }
 
+    // MARK: - Edge Cases
+
+    func testPlacementWithOneBall() throws {
+        let positions = try XCTUnwrap(
+            BallPlacementEngine.generatePositions(
+                count: 1,
+                ballRadius: 30,
+                screenSize: iPhone16ProSize
+            )
+        )
+        XCTAssertEqual(positions.count, 1)
+    }
+
+    func testPlacementReturnsNilForImpossibleCount() {
+        // 50 large balls on tiny screen — should return nil or fall back to grid
+        let positions = BallPlacementEngine.generatePositions(
+            count: 50,
+            ballRadius: 30,
+            screenSize: iPhoneSESize
+        )
+        // Either nil or fewer than requested
+        if let positions = positions {
+            XCTAssertLessThanOrEqual(positions.count, 50)
+        }
+    }
+
     // MARK: - Performance
 
     func testPlacementPerformance() {

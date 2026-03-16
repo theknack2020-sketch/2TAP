@@ -1,9 +1,9 @@
 # GSD State
 
 **Active Milestone:** M001 — 2TAP Audit & Improvement
-**Active Slice:** S01 — Bug Fixes & Critical UX
-**Active Task:** none (slice not yet planned)
-**Phase:** Planning S01
+**Active Slice:** S05 — Code Quality & Maintainability
+**Active Task:** T01 — GameScene split, singleton cleanup, async migration
+**Phase:** Executing
 
 ## Recent Decisions
 - D001: Only penalize wrong-ball taps, not empty space

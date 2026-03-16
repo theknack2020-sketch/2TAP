@@ -32,14 +32,14 @@ enum AppTheme: String, CaseIterable, Identifiable {
 final class SettingsManager {
     static let shared = SettingsManager()
 
-    // MARK: - Sound
+    // MARK: - Sound & Haptics
 
     var soundEnabled: Bool {
         didSet { UserDefaults.standard.set(soundEnabled, forKey: "soundEnabled") }
     }
 
-    var musicEnabled: Bool {
-        didSet { UserDefaults.standard.set(musicEnabled, forKey: "musicEnabled") }
+    var hapticsEnabled: Bool {
+        didSet { UserDefaults.standard.set(hapticsEnabled, forKey: "hapticsEnabled") }
     }
 
     // MARK: - Theme
@@ -58,7 +58,7 @@ final class SettingsManager {
         ColorPalette.allPalettes.first { $0.id == selectedPaletteId } ?? .default
     }
 
-    // MARK: - High Score
+    // MARK: - High Score (per-difficulty)
 
     var highScore: Int {
         didSet { UserDefaults.standard.set(highScore, forKey: "highScore") }
@@ -70,6 +70,17 @@ final class SettingsManager {
 
     var highScoreRounds: Int {
         didSet { UserDefaults.standard.set(highScoreRounds, forKey: "highScoreRounds") }
+    }
+
+    // Per-difficulty high scores
+    var highScoreEasy: Int {
+        didSet { UserDefaults.standard.set(highScoreEasy, forKey: "highScoreEasy") }
+    }
+    var highScoreNormal: Int {
+        didSet { UserDefaults.standard.set(highScoreNormal, forKey: "highScoreNormal") }
+    }
+    var highScoreInsane: Int {
+        didSet { UserDefaults.standard.set(highScoreInsane, forKey: "highScoreInsane") }
     }
 
     // MARK: - Daily Streak
@@ -98,7 +109,7 @@ final class SettingsManager {
         // Register defaults
         defaults.register(defaults: [
             "soundEnabled": true,
-            "musicEnabled": true,
+            "hapticsEnabled": true,
             "theme": AppTheme.system.rawValue,
             "selectedPalette": ColorPalette.default.id,
             "highScore": 0,
@@ -107,12 +118,15 @@ final class SettingsManager {
         ])
 
         self.soundEnabled = defaults.bool(forKey: "soundEnabled")
-        self.musicEnabled = defaults.bool(forKey: "musicEnabled")
+        self.hapticsEnabled = defaults.bool(forKey: "hapticsEnabled")
         self.theme = AppTheme(rawValue: defaults.string(forKey: "theme") ?? "system") ?? .system
         self.selectedPaletteId = defaults.string(forKey: "selectedPalette") ?? ColorPalette.default.id
         self.highScore = defaults.integer(forKey: "highScore")
         self.highScoreBestCombo = defaults.integer(forKey: "highScoreBestCombo")
         self.highScoreRounds = defaults.integer(forKey: "highScoreRounds")
+        self.highScoreEasy = defaults.integer(forKey: "highScoreEasy")
+        self.highScoreNormal = defaults.integer(forKey: "highScoreNormal")
+        self.highScoreInsane = defaults.integer(forKey: "highScoreInsane")
         self.currentStreak = defaults.integer(forKey: "currentStreak")
         self.lastPlayDate = defaults.object(forKey: "lastPlayDate") as? Date
         self.bestStreak = defaults.integer(forKey: "bestStreak")
@@ -124,11 +138,29 @@ final class SettingsManager {
 
     // MARK: - Actions
 
-    func updateHighScore(score: Int, bestCombo: Int, rounds: Int) {
+    func updateHighScore(score: Int, bestCombo: Int, rounds: Int, difficulty: DifficultyMode) {
+        // Update global high score
         if score > highScore {
             highScore = score
             highScoreBestCombo = bestCombo
             highScoreRounds = rounds
+        }
+        // Update per-difficulty high score
+        switch difficulty {
+        case .easy:
+            if score > highScoreEasy { highScoreEasy = score }
+        case .normal:
+            if score > highScoreNormal { highScoreNormal = score }
+        case .insane:
+            if score > highScoreInsane { highScoreInsane = score }
+        }
+    }
+
+    func highScore(for difficulty: DifficultyMode) -> Int {
+        switch difficulty {
+        case .easy: return highScoreEasy
+        case .normal: return highScoreNormal
+        case .insane: return highScoreInsane
         }
     }
 
@@ -136,6 +168,9 @@ final class SettingsManager {
         highScore = 0
         highScoreBestCombo = 0
         highScoreRounds = 0
+        highScoreEasy = 0
+        highScoreNormal = 0
+        highScoreInsane = 0
     }
 
     /// Record a game was played today. Updates streak.

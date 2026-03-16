@@ -1,35 +1,35 @@
-# T02: Ball Placement Engine
+# T02: Critical UX — pause Home button, empty-tap penalty removal
 
 **Slice:** S01
 **Milestone:** M001
 
 ## Goal
-Implement a non-overlapping random ball placement algorithm that positions 5-12+ balls within the playable area, ensuring at least a finger-tap gap between each ball and screen edges.
+Fix 2 critical UX issues: add Home button to pause screen (R003), remove empty-space tap penalty (R004).
 
 ## Must-Haves
 
 ### Truths
-- Given a screen size and ball count (5-12), placement always produces valid non-overlapping positions
-- Minimum gap between any two ball edges >= 44pt (finger tap target)
-- No ball clips the screen edges (minimum 20pt margin from safe area)
-- Algorithm completes in < 50ms for 12 balls (no perceptible lag)
+- Pause overlay shows "Home" button that navigates to main menu
+- Tapping empty space during gameplay does NOT cost a life
+- Tapping a wrong-colored ball still costs a life
+- Tapping a correct ball still works normally
+- All 30+ existing tests pass
 
 ### Artifacts
-- `TwoTapGame/Game/BallPlacementEngine.swift` — placement algorithm (min 60 lines, pure logic, no UI dependencies)
+- `Views/GameView.swift` — pause overlay includes Home button
+- `Game/GameScene.swift` — touchesBegan ignores empty-space taps
 
 ### Key Links
-- `BallPlacementEngine.swift` is pure logic — consumed by `GameScene.swift` in T04
+- GameView.pauseOverlay → onHome callback
+- GameScene.touchesBegan → only calls handleRoundFailure for wrong-ball taps
 
 ## Steps
-1. Define BallPlacementEngine struct with `generatePositions(count:ballRadius:screenSize:safeArea:) -> [CGPoint]`
-2. Implement rejection-sampling placement: pick random position, check against all placed balls for minimum distance, retry if overlap
-3. Add max-retry limit with fallback grid-based placement if random fails
-4. Add screen edge margin enforcement
-5. Write unit tests for: 5 balls, 7 balls, 12 balls, edge cases (tiny screen)
-6. Verify performance with 12 balls
+1. Edit GameScene.touchesBegan — remove empty-space handleRoundFailure call, keep wrong-ball penalty
+2. Edit GameView pauseOverlay — add Home button using onHome callback
+3. Build and test
+4. Install on simulator, verify: pause shows Home, empty taps do nothing, wrong ball still penalizes
 
 ## Context
-- Ball radius ~30-40pt depending on screen size
-- Minimum gap between ball edges: 44pt (Apple's touch target minimum)
-- Playable area excludes top (timer bar) and any HUD elements
-- Must work on iPhone SE (smallest screen) through iPhone Pro Max
+- D001 decision: only penalize wrong-ball taps, not empty space
+- GameView already has onHome callback — just need to wire it into pause overlay
+- Pause overlay currently only has Resume button

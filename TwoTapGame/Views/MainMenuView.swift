@@ -68,17 +68,20 @@ struct MainMenuView: View {
 
                 Spacer()
 
-                // Stats badges
+                // Stats badges — show per-difficulty best
                 if settings.highScore > 0 || settings.currentStreak > 0 {
                     HStack(spacing: 16) {
-                        if settings.highScore > 0 {
+                        // Per-difficulty high score
+                        let diffScore = settings.highScore(for: selectedDifficulty)
+                        if diffScore > 0 {
                             HStack(spacing: 6) {
                                 Image(systemName: "trophy.fill")
                                     .foregroundStyle(.yellow.opacity(0.8))
                                     .font(.system(size: 14))
-                                Text("\(settings.highScore)")
+                                Text("\(diffScore)")
                                     .font(.system(size: 17, weight: .bold, design: .rounded))
                                     .foregroundStyle(.white.opacity(0.6))
+                                    .contentTransition(.numericText())
                             }
                         }
 
@@ -105,6 +108,7 @@ struct MainMenuView: View {
                     .opacity(buttonsVisible ? 1 : 0)
                     .offset(y: buttonsVisible ? 0 : 15)
                     .padding(.bottom, 20)
+                    .animation(.easeInOut(duration: 0.2), value: selectedDifficulty)
                 }
 
                 // Difficulty selector

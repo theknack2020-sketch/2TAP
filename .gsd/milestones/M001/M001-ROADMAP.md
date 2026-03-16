@@ -53,19 +53,19 @@ This milestone is complete only when all are true:
 
 ## Slices
 
-- [ ] **S01: Bug Fixes & Critical UX** `risk:high` `depends:[]`
+- [x] **S01: Bug Fixes & Critical UX** `risk:high` `depends:[]`
   > After this: Game plays without race conditions or phantom life loss. Review prompt persists across sessions. Player can exit to menu from pause. Empty-space taps don't cost lives. Verified on simulator.
 
-- [ ] **S02: Test Coverage Hardening** `risk:medium` `depends:[S01]`
+- [x] **S02: Test Coverage Hardening** `risk:medium` `depends:[S01]`
   > After this: 30+ new unit tests covering GameState state machine, SettingsManager streak logic, BallNode hit testing, and engine edge cases. All 60+ tests green.
 
-- [ ] **S03: UX Polish & Device Compatibility** `risk:medium` `depends:[S01]`
+- [x] **S03: UX Polish & Device Compatibility** `risk:medium` `depends:[S01]`
   > After this: Per-difficulty high scores display in menu. Target color indicator is prominent. Timer transitions are smooth. Layout works correctly from iPhone SE to Pro Max. Verified via simulator screenshots on multiple devices.
 
-- [ ] **S04: Player Features** `risk:medium` `depends:[S01,S03]`
+- [x] **S04: Player Features** `risk:medium` `depends:[S01,S03]`
   > After this: Color-blind mode shows shape overlays on balls. Score sharing via share sheet works. Haptic toggle in settings. Quick restart skips countdown. Verified on simulator.
 
-- [ ] **S05: Code Quality & Maintainability** `risk:low` `depends:[S01,S02]`
+- [x] **S05: Code Quality & Maintainability** `risk:low` `depends:[S01,S02]`
   > After this: GameScene split into focused modules (none >200 lines). Singletons replaced with protocols. DispatchQueue migrated to Task. All tests still pass after refactor.
 
 ## Boundary Map

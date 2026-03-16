@@ -13,13 +13,17 @@ struct SettingsView: View {
 
         NavigationStack {
             List {
-                // MARK: - Sound
+                // MARK: - Sound & Haptics
                 Section {
                     Toggle(isOn: $settings.soundEnabled) {
                         Label("Sound Effects", systemImage: "speaker.wave.2.fill")
                     }
+
+                    Toggle(isOn: $settings.hapticsEnabled) {
+                        Label("Haptic Feedback", systemImage: "hand.tap.fill")
+                    }
                 } header: {
-                    Text("Audio")
+                    Text("Audio & Haptics")
                 }
 
                 // MARK: - Appearance
@@ -72,6 +76,31 @@ struct SettingsView: View {
                         Label("Most Rounds", systemImage: "arrow.counterclockwise")
                         Spacer()
                         Text("\(settings.highScoreRounds)")
+                            .foregroundStyle(.secondary)
+                    }
+
+                    // Per-difficulty scores
+                    HStack {
+                        Label("Easy Best", systemImage: "circle.fill")
+                            .foregroundStyle(.green)
+                        Spacer()
+                        Text("\(settings.highScoreEasy)")
+                            .foregroundStyle(.secondary)
+                    }
+
+                    HStack {
+                        Label("Normal Best", systemImage: "circle.fill")
+                            .foregroundStyle(.yellow)
+                        Spacer()
+                        Text("\(settings.highScoreNormal)")
+                            .foregroundStyle(.secondary)
+                    }
+
+                    HStack {
+                        Label("Insane Best", systemImage: "circle.fill")
+                            .foregroundStyle(.red)
+                        Spacer()
+                        Text("\(settings.highScoreInsane)")
                             .foregroundStyle(.secondary)
                     }
 

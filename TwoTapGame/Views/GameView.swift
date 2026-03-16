@@ -11,14 +11,11 @@ struct GameView: View {
     @State var gameState = GameState()
     @State private var gameScene: GameScene?
     @State private var flashOpacity: Double = 0
-    @State private var gamesPlayed: Int = 0
     @State private var comboPopupText: String = ""
     @State private var showComboPopup = false
     @State private var scorePopupText: String = ""
     @State private var showScorePopup = false
     @State private var scorePopupOffset: CGFloat = 0
-    @State private var gameOverCardScale: CGFloat = 0.8
-    @State private var gameOverCardOpacity: Double = 0
     @State private var gameOverScoreAnimated: Int = 0
     @State private var showNewBest = false
 
@@ -46,14 +43,13 @@ struct GameView: View {
                 frameFlashOverlay
             }
 
-            // HUD
+            // HUD — respects safe area for notch/Dynamic Island
             VStack(spacing: 0) {
-                Spacer().frame(height: 58)
-
-                // Timer bar
+                // Timer bar — stays visible during success for smooth transition
                 TimerBarView(progress: gameState.timerProgress)
                     .padding(.horizontal, 20)
-                    .opacity(gameState.phase == .playing ? 1 : 0)
+                    .opacity(gameState.phase == .playing || gameState.phase == .success ? 1 : 0)
+                    .animation(.easeInOut(duration: 0.2), value: gameState.phase)
 
                 // HUD row
                 hudRow
@@ -63,31 +59,31 @@ struct GameView: View {
 
                 // Target color indicator
                 if gameState.phase == .playing, let matchColor = gameState.matchingColor {
-                    HStack(spacing: 8) {
+                    HStack(spacing: 10) {
                         Text("FIND")
-                            .font(.system(size: 10, weight: .bold, design: .rounded))
-                            .foregroundStyle(.white.opacity(0.4))
+                            .font(.system(size: 13, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.5))
                             .tracking(2)
 
                         Circle()
                             .fill(Color(matchColor))
-                            .frame(width: 22, height: 22)
+                            .frame(width: 32, height: 32)
                             .overlay(
-                                Circle().stroke(.white.opacity(0.3), lineWidth: 1.5)
+                                Circle().stroke(.white.opacity(0.35), lineWidth: 2)
                             )
-                            .shadow(color: Color(matchColor).opacity(0.5), radius: 6)
+                            .shadow(color: Color(matchColor).opacity(0.6), radius: 10)
 
                         Text("×\(gameState.matchCount - gameState.tappedMatchCount)")
-                            .font(.system(size: 13, weight: .bold, design: .rounded))
-                            .foregroundStyle(.white.opacity(0.6))
+                            .font(.system(size: 18, weight: .black, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.7))
                     }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 6)
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 8)
                     .background(
-                        Capsule().fill(.white.opacity(0.06))
+                        Capsule().fill(.white.opacity(0.08))
                     )
-                    .padding(.top, 6)
-                    .transition(.opacity)
+                    .padding(.top, 8)
+                    .transition(.opacity.combined(with: .scale))
                 }
 
                 Spacer()
@@ -130,23 +126,40 @@ struct GameView: View {
 
             // Game Over
             if gameState.phase == .gameOver {
-                gameOverOverlay
+                GameOverView(
+                    gameState: gameState,
+                    settings: settings,
+                    gameOverScoreAnimated: gameOverScoreAnimated,
+                    showNewBest: showNewBest,
+                    onPlayAgain: {
+                        gameScene?.skipCountdown = true
+                        gameScene?.startGame()
+                    },
+                    onShare: { shareScore() },
+                    onHome: onHome.map { home in
+                        { gameScene?.stopGame(); home() }
+                    }
+                )
             }
         }
-        .onAppear {
-            let newScene = GameScene()
-            newScene.size = UIScreen.main.bounds.size
-            newScene.scaleMode = .resizeFill
-            newScene.backgroundColor = .clear
-            newScene.gameState = gameState
-            gameScene = newScene
+        .background(
+            GeometryReader { geo in
+                Color.clear.onAppear {
+                    let newScene = GameScene()
+                    newScene.size = geo.size
+                    newScene.scaleMode = .resizeFill
+                    newScene.backgroundColor = .clear
+                    newScene.gameState = gameState
+                    gameScene = newScene
 
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                gameState.palette = settings.selectedPalette
-                gameState.difficultyMode = difficultyMode
-                gameScene?.startGame()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        gameState.palette = settings.selectedPalette
+                        gameState.difficultyMode = difficultyMode
+                        gameScene?.startGame()
+                    }
+                }
             }
-        }
+        )
         .onDisappear {
             gameScene?.stopGame()
         }
@@ -168,25 +181,19 @@ struct GameView: View {
         }
         .onChange(of: gameState.phase) { _, newPhase in
             if newPhase == .gameOver {
-                let isNewBest = gameState.score > settings.highScore && gameState.score > 0
+                let isNewBest = gameState.score > settings.highScore(for: gameState.difficultyMode) && gameState.score > 0
                 settings.updateHighScore(
                     score: gameState.score,
                     bestCombo: gameState.bestCombo,
-                    rounds: gameState.roundsSurvived
+                    rounds: gameState.roundsSurvived,
+                    difficulty: gameState.difficultyMode
                 )
                 settings.recordGamePlayed()
-                GameCenterManager.shared.submitScore(gameState.score)
+                GameCenterManager.shared.submitScore(gameState.score, difficulty: gameState.difficultyMode)
 
-                // Animate game over card entrance
-                gameOverCardScale = 0.8
-                gameOverCardOpacity = 0
                 gameOverScoreAnimated = 0
                 showNewBest = false
 
-                withAnimation(.spring(response: 0.5, dampingFraction: 0.75)) {
-                    gameOverCardScale = 1.0
-                    gameOverCardOpacity = 1.0
-                }
                 // Count up score
                 animateScoreCount(to: gameState.score)
                 // New best badge with delay
@@ -199,8 +206,8 @@ struct GameView: View {
                     }
                 }
 
-                gamesPlayed += 1
-                if gamesPlayed == 5 && gameState.score >= 500 {
+                // Request review after 5 total games with a decent score
+                if settings.totalGamesPlayed == 5 && gameState.score >= 500 {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
                         requestReview()
                     }
@@ -291,7 +298,8 @@ struct GameView: View {
         withAnimation(.easeOut(duration: 0.8)) {
             scorePopupOffset = -40
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+        Task {
+            try? await Task.sleep(for: .seconds(0.6))
             withAnimation(.easeOut(duration: 0.2)) {
                 showScorePopup = false
             }
@@ -327,11 +335,32 @@ struct GameView: View {
         withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
             showComboPopup = true
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+        Task {
+            try? await Task.sleep(for: .seconds(0.6))
             withAnimation(.easeOut(duration: 0.2)) {
                 showComboPopup = false
             }
         }
+    }
+
+    // MARK: - Share
+
+    private func shareScore() {
+        let text = "🎮 2TAP — I scored \(gameState.score) on \(gameState.difficultyMode.displayName) mode! Best combo: x\(gameState.bestCombo), survived \(gameState.roundsSurvived) rounds. Can you beat it?"
+
+        guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let root = scene.windows.first?.rootViewController else { return }
+
+        let activityVC = UIActivityViewController(activityItems: [text], applicationActivities: nil)
+
+        // iPad popover support
+        if let popover = activityVC.popoverPresentationController {
+            popover.sourceView = root.view
+            popover.sourceRect = CGRect(x: root.view.bounds.midX, y: root.view.bounds.midY, width: 0, height: 0)
+            popover.permittedArrowDirections = []
+        }
+
+        root.present(activityVC, animated: true)
     }
 
     // MARK: - Flash
@@ -340,12 +369,12 @@ struct GameView: View {
         withAnimation(.easeIn(duration: 0.08)) {
             flashOpacity = 0.5
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
+        Task {
+            try? await Task.sleep(for: .seconds(0.12))
             withAnimation(.easeOut(duration: 0.25)) {
                 flashOpacity = 0
             }
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+            try? await Task.sleep(for: .seconds(0.28))
             gameState.flashColor = .none
         }
     }
@@ -410,209 +439,28 @@ struct GameView: View {
                             )
                     )
                 }
-            }
-        }
-    }
 
-    // MARK: - Game Over
-
-    private var gameOverOverlay: some View {
-        ZStack {
-            // Dimmed background
-            Color.black.opacity(0.8)
-                .ignoresSafeArea()
-
-            VStack(spacing: 0) {
-                Spacer()
-
-                // Score card
-                VStack(spacing: 20) {
-                    // Header
-                    Text("GAME OVER")
-                        .font(.system(size: 14, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.35))
-                        .tracking(6)
-
-                    // Difficulty badge
-                    HStack(spacing: 5) {
-                        Text(gameState.difficultyMode.emoji)
-                            .font(.system(size: 12))
-                        Text(gameState.difficultyMode.displayName.uppercased())
-                            .font(.system(size: 10, weight: .bold, design: .rounded))
-                            .foregroundStyle(.white.opacity(0.4))
-                            .tracking(2)
-                    }
-
-                    // Big animated score
-                    VStack(spacing: 6) {
-                        Text("\(gameOverScoreAnimated)")
-                            .font(.system(size: 60, weight: .black, design: .rounded))
-                            .foregroundStyle(.white)
-                            .contentTransition(.numericText())
-
-                        if showNewBest {
-                            HStack(spacing: 5) {
-                                Image(systemName: "crown.fill")
-                                    .font(.system(size: 11))
-                                Text("NEW BEST!")
-                                    .font(.system(size: 13, weight: .black, design: .rounded))
-                                    .tracking(2)
-                            }
-                            .foregroundStyle(.yellow)
-                            .shadow(color: .yellow.opacity(0.4), radius: 8)
-                            .transition(.scale.combined(with: .opacity))
-                        }
-                    }
-
-                    // Stats grid
-                    HStack(spacing: 0) {
-                        statBadge(
-                            icon: "flame.fill",
-                            value: "x\(gameState.bestCombo)",
-                            label: "Combo",
-                            color: .orange
-                        )
-                        statDivider
-                        statBadge(
-                            icon: "circle.hexagongrid",
-                            value: "\(gameState.roundsSurvived)",
-                            label: "Rounds",
-                            color: .cyan
-                        )
-                        statDivider
-                        statBadge(
-                            icon: "bolt.fill",
-                            value: DifficultyEngine.levelName(forScore: gameState.score),
-                            label: "Level",
-                            color: .purple
-                        )
-                    }
-                    .padding(.vertical, 12)
-                    .background(
-                        RoundedRectangle(cornerRadius: 14)
-                            .fill(.white.opacity(0.04))
-                    )
-
-                    // Streak
-                    if settings.currentStreak > 0 {
+                // Home button — exit to main menu
+                if let onHome {
+                    Button {
+                        gameScene?.stopGame()
+                        onHome()
+                    } label: {
                         HStack(spacing: 6) {
-                            Image(systemName: "flame.fill")
-                                .foregroundStyle(.orange)
-                                .font(.system(size: 13))
-                            Text("\(settings.currentStreak) day streak")
-                                .font(.system(size: 13, weight: .semibold, design: .rounded))
-                                .foregroundStyle(.white.opacity(0.45))
+                            Image(systemName: "house.fill")
+                                .font(.system(size: 12))
+                            Text("Home")
                         }
+                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.4))
+                        .padding(.vertical, 8)
                     }
-
-                    // Buttons
-                    VStack(spacing: 10) {
-                        Button {
-                            gameScene?.startGame()
-                        } label: {
-                            HStack(spacing: 8) {
-                                Image(systemName: "arrow.counterclockwise")
-                                Text("Play Again")
-                            }
-                            .font(.system(size: 18, weight: .bold, design: .rounded))
-                            .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 16)
-                            .background(
-                                RoundedRectangle(cornerRadius: 16)
-                                    .fill(
-                                        LinearGradient(
-                                            colors: [.orange, .orange.opacity(0.8)],
-                                            startPoint: .top,
-                                            endPoint: .bottom
-                                        )
-                                    )
-                            )
-                        }
-
-                        // Leaderboard button
-                        if GameCenterManager.shared.isAuthenticated {
-                            Button {
-                                GameCenterManager.shared.showLeaderboard()
-                            } label: {
-                                HStack(spacing: 6) {
-                                    Image(systemName: "trophy.fill")
-                                        .font(.system(size: 13))
-                                    Text("Leaderboard")
-                                }
-                                .font(.system(size: 15, weight: .semibold, design: .rounded))
-                                .foregroundStyle(.yellow.opacity(0.7))
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 12)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 14)
-                                        .fill(.yellow.opacity(0.06))
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 14)
-                                                .stroke(.yellow.opacity(0.1), lineWidth: 1)
-                                        )
-                                )
-                            }
-                        }
-
-                        if let onHome {
-                            Button {
-                                gameScene?.stopGame()
-                                onHome()
-                            } label: {
-                                HStack(spacing: 6) {
-                                    Image(systemName: "house.fill")
-                                        .font(.system(size: 12))
-                                    Text("Home")
-                                }
-                                .font(.system(size: 14, weight: .semibold, design: .rounded))
-                                .foregroundStyle(.white.opacity(0.4))
-                                .padding(.vertical, 8)
-                            }
-                        }
-                    }
-                    .padding(.top, 4)
+                    .padding(.top, 8)
                 }
-                .padding(28)
-                .background(
-                    RoundedRectangle(cornerRadius: 28)
-                        .fill(.ultraThinMaterial)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 28)
-                                .stroke(.white.opacity(0.08), lineWidth: 1)
-                        )
-                        .shadow(color: .black.opacity(0.4), radius: 30, y: 10)
-                )
-                .scaleEffect(gameOverCardScale)
-                .opacity(gameOverCardOpacity)
-                .padding(.horizontal, 24)
-
-                Spacer()
             }
         }
-        .transition(.opacity)
     }
 
-    private var statDivider: some View {
-        Rectangle()
-            .fill(.white.opacity(0.08))
-            .frame(width: 1, height: 30)
-    }
-
-    private func statBadge(icon: String, value: String, label: String, color: Color) -> some View {
-        VStack(spacing: 5) {
-            Image(systemName: icon)
-                .font(.system(size: 11))
-                .foregroundStyle(color.opacity(0.6))
-            Text(value)
-                .font(.system(size: 18, weight: .bold, design: .rounded))
-                .foregroundStyle(color)
-            Text(label)
-                .font(.system(size: 9, weight: .medium, design: .rounded))
-                .foregroundStyle(.white.opacity(0.35))
-        }
-        .frame(maxWidth: .infinity)
-    }
 }
 
 #Preview {

@@ -1,39 +1,41 @@
-# T01: Xcode Project Scaffold
+# T01: Fix bugs — review prompt, race condition, deprecated API, dead code
 
 **Slice:** S01
 **Milestone:** M001
 
 ## Goal
-Create a working Xcode project with XcodeGen — SwiftUI app with SpriteKit dependency, proper directory structure, and verified build on iOS simulator.
+Fix 4 bugs: broken review prompt (R001), race condition in failure handling (R002), deprecated UIScreen.main (R005), dead musicEnabled code (R006).
 
 ## Must-Haves
 
 ### Truths
-- `xcodebuild -scheme TwoTapGame -destination 'platform=iOS Simulator,name=iPhone 16 Pro' build` succeeds
-- App launches on simulator showing a placeholder screen
+- gamesPlayed counter persists across app relaunches (stored in UserDefaults)
+- handleRoundFailure uses cancellable Task pattern — no phantom life loss possible
+- GameView scene sizing uses GeometryReader, not UIScreen.main
+- No musicEnabled property in SettingsManager or AudioManager
+- All 30 existing tests pass
+- Build clean
 
 ### Artifacts
-- `project.yml` — XcodeGen config targeting iOS 17+, SwiftUI lifecycle
-- `TwoTapGame/App/TwoTapGameApp.swift` — @main app entry point
-- `TwoTapGame/App/ContentView.swift` — placeholder root view
-- `TwoTapGame/Resources/Assets.xcassets/` — asset catalog with AccentColor and AppIcon
-- `TwoTapGame.xcodeproj` — generated Xcode project
+- `Models/SettingsManager.swift` — gamesPlayed persisted via UserDefaults, musicEnabled removed
+- `Game/GameScene.swift` — handleRoundFailure uses stored Task reference with cancellation
+- `Views/GameView.swift` — GeometryReader for scene sizing
+- `Game/AudioManager.swift` — startMusic/stopMusic/updateMusicState removed
 
 ### Key Links
-- `TwoTapGameApp.swift` → `ContentView.swift` via WindowGroup body
-- `project.yml` → generates `TwoTapGame.xcodeproj` via `xcodegen generate`
+- GameView → SettingsManager.gamesPlayed for review prompt
+- GameScene.handleRoundFailure → Task cancellation via stored reference
 
 ## Steps
-1. Create directory structure: App, Game, Views, Models, Resources
-2. Create project.yml for XcodeGen (iOS 17+, SwiftUI lifecycle, SpriteKit framework)
-3. Create TwoTapGameApp.swift with @main entry point
-4. Create ContentView.swift with placeholder text
-5. Create Assets.xcassets with AccentColor and AppIcon stubs
-6. Run xcodegen generate
-7. Build with xcodebuild and verify success
+1. Read current SettingsManager — add gamesPlayed property with UserDefaults persistence, remove musicEnabled
+2. Read current GameView — replace UIScreen.main with GeometryReader, update review prompt to use settings.totalGamesPlayed
+3. Read current GameScene — add stored Task reference for failure handling, cancel on startGame/startNextRound
+4. Read current AudioManager — remove startMusic/stopMusic/updateMusicState
+5. Run xcodegen generate
+6. Build and run tests
+7. Verify on simulator
 
 ## Context
-- Using XcodeGen to avoid committing .xcodeproj internals
-- iOS 17+ for @Observable, modern SwiftUI APIs
-- SpriteKit linked as system framework (not SPM)
-- Bundle ID: com.ufuk.twotapgame (or similar)
+- SettingsManager already has totalGamesPlayed — may be able to reuse that instead of adding new property
+- Race condition: the core issue is Task.sleep in handleRoundFailure can outlive the game session
+- DifficultyEngine comment "Starts at 5" is misleading but not a code bug — fix comment while there

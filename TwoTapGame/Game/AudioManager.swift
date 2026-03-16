@@ -400,9 +400,4 @@ final class AudioManager: @unchecked Sendable {
         return buffer
     }
 
-    // MARK: - Music (unused — kept for future)
-
-    func startMusic() {}
-    func stopMusic() {}
-    func updateMusicState() {}
 }

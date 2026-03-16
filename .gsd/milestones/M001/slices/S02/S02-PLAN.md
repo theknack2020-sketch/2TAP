@@ -1,35 +1,29 @@
-# S02: Scoring, Lives & Game Polish
+# S02: Test Coverage Hardening
 
-**Goal:** Implement proper scoring with combo multiplier, difficulty progression (more balls at score thresholds), pause system, frame feedback (green/red flash), and 3D metallic ball rendering.
-**Demo:** Score increases with combo, difficulty ramps up, pause works, frame flashes on result, balls look 3D metallic.
+**Goal:** Add 30+ new unit tests covering GameState, SettingsManager, BallNode, and engine edge cases.
+**Demo:** 60+ total tests all green. Critical state machine, streak logic, hit testing, and edge cases covered.
 
 ## Must-Haves
-- Combo multiplier: consecutive correct rounds increase multiplier (x2, x3...), mistake resets to x1
-- +1 life bonus every 10 consecutive perfect rounds
-- Difficulty progression: ball count increases at score thresholds
-- Pause system: 3 pauses per game, button on screen, freezes timer and hides balls
-- Frame feedback: green flash on correct match, red flash on wrong/timeout
-- 3D metallic ball rendering with shading, highlights, depth
+- GameState tests: reset(), markBallTapped(), allMatchesTapped, matchCount, tappedMatchCount
+- SettingsManager tests: recordGamePlayed() streak logic, updateHighScore, date edge cases
+- BallNode tests: hitTest including 44pt minimum, edge cases
+- Engine edge cases: zero/negative combos, boundary thresholds, palette validation, impossible placements
+- Total test count ≥60
+- All tests pass
 
 ## Tasks
 
-- [x] **T01: Scoring Engine & Difficulty Progression**
-  Proper combo multiplier scoring, +1 life every 10 perfect rounds, ball count increase at score thresholds.
+- [ ] **T01: GameState + SettingsManager tests**
+  Unit tests for the two critical untested @Observable classes.
 
-- [x] **T02: Pause System**
-  Pause button on game screen, 3 pauses per game, freezes timer, dims/hides balls.
-
-- [x] **T03: Frame Feedback**
-  Screen border green flash on correct, red flash on wrong/timeout. Brief, non-blocking.
-
-- [x] **T04: 3D Metallic Ball Rendering**
-  Replace basic circles with metallic-looking balls — radial gradient, specular highlight, shadow, depth.
+- [ ] **T02: BallNode + engine edge case tests**
+  Hit testing validation and edge cases for all four engines.
 
 ## Files Likely Touched
-- TwoTapGame/Game/GameScene.swift
-- TwoTapGame/Game/GameState.swift
-- TwoTapGame/Game/BallNode.swift
-- TwoTapGame/Game/ScoreEngine.swift (new)
-- TwoTapGame/Game/DifficultyEngine.swift (new)
-- TwoTapGame/Views/GameView.swift
-- TwoTapGame/Views/FrameFlashView.swift (new)
+- TwoTapGameTests/GameStateTests.swift (new)
+- TwoTapGameTests/SettingsManagerTests.swift (new)
+- TwoTapGameTests/BallNodeTests.swift (new)
+- TwoTapGameTests/ScoreEngineTests.swift (additions)
+- TwoTapGameTests/DifficultyEngineTests.swift (additions)
+- TwoTapGameTests/BallPlacementEngineTests.swift (additions)
+- TwoTapGameTests/ColorMatchEngineTests.swift (additions)

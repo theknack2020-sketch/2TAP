@@ -7,6 +7,17 @@ final class GameCenterManager {
 
     /// Leaderboard IDs — must match App Store Connect configuration.
     static let highScoreLeaderboardID = "com.ufuk.twotapgame.highscore"
+    static let easyLeaderboardID = "com.ufuk.twotapgame.highscore.easy"
+    static let normalLeaderboardID = "com.ufuk.twotapgame.highscore.normal"
+    static let insaneLeaderboardID = "com.ufuk.twotapgame.highscore.insane"
+
+    static func leaderboardID(for difficulty: DifficultyMode) -> String {
+        switch difficulty {
+        case .easy: return easyLeaderboardID
+        case .normal: return normalLeaderboardID
+        case .insane: return insaneLeaderboardID
+        }
+    }
 
     private(set) var isAuthenticated = false
 
@@ -36,9 +47,14 @@ final class GameCenterManager {
         }
     }
 
-    /// Submit a score to the leaderboard.
-    func submitScore(_ score: Int) {
+    /// Submit a score to both global and per-difficulty leaderboards.
+    func submitScore(_ score: Int, difficulty: DifficultyMode) {
         guard isAuthenticated, score > 0 else { return }
+
+        let leaderboardIDs = [
+            Self.highScoreLeaderboardID,
+            Self.leaderboardID(for: difficulty)
+        ]
 
         Task {
             do {
@@ -46,9 +62,9 @@ final class GameCenterManager {
                     score,
                     context: 0,
                     player: GKLocalPlayer.local,
-                    leaderboardIDs: [Self.highScoreLeaderboardID]
+                    leaderboardIDs: leaderboardIDs
                 )
-                print("✅ Score \(score) submitted to GameCenter")
+                print("✅ Score \(score) submitted to GameCenter (\(difficulty.displayName))")
             } catch {
                 print("⚠️ GameCenter score submit failed: \(error.localizedDescription)")
             }

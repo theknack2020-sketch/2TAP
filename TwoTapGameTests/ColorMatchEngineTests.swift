@@ -148,4 +148,29 @@ final class ColorMatchEngineTests: XCTestCase {
         let round = ColorMatchEngine.generateRound(ballCount: 12)
         XCTAssertEqual(round.assignments.count, 12)
     }
+
+    // MARK: - Palette Size Validation
+
+    func testAllPalettesHaveEnoughColorsForMaxBalls() {
+        // Max 12 balls → need at least 10 unique colors (12 - 3 matching + 1)
+        let minColorsNeeded = 10
+        for palette in ColorPalette.allPalettes {
+            XCTAssertGreaterThanOrEqual(
+                palette.colors.count, minColorsNeeded,
+                "Palette '\(palette.name)' has \(palette.colors.count) colors, needs \(minColorsNeeded)"
+            )
+        }
+    }
+
+    func testGenerateRoundWithAllPalettes() {
+        for palette in ColorPalette.allPalettes {
+            for count in [6, 9, 12] {
+                let round = ColorMatchEngine.generateRound(ballCount: count, palette: palette)
+                XCTAssertEqual(round.assignments.count, count,
+                    "Palette '\(palette.name)' failed for \(count) balls")
+                XCTAssertEqual(round.matchCount, 3,
+                    "Palette '\(palette.name)' match count wrong for \(count) balls")
+            }
+        }
+    }
 }

@@ -3,7 +3,7 @@ import Foundation
 /// Controls difficulty progression based on score.
 ///
 /// Ball count increases at score thresholds.
-/// Starts at 5, increases gradually up to screen maximum.
+/// Starts at 6, increases gradually up to 12 (screen maximum).
 struct DifficultyEngine {
 
     /// Score thresholds and their corresponding ball counts.
@@ -25,7 +25,7 @@ struct DifficultyEngine {
     ///   - maxBalls: maximum balls that fit on screen
     /// - Returns: number of balls for the next round
     static func ballCount(forScore score: Int, maxBalls: Int = 12) -> Int {
-        var result = 5
+        var result = 6
         for threshold in thresholds {
             if score >= threshold.score {
                 result = threshold.balls

@@ -20,12 +20,21 @@ class BallNode: SKNode {
     /// Speed multiplier for physics movement — set before animateAppear.
     var speedMultiplier: CGFloat = 1.0
 
+    /// Shape index for color-blind mode — each unique color gets a different shape.
+    var shapeIndex: Int = 0
+
+    /// Whether to show shape overlay for accessibility.
+    var showAccessibilityShape: Bool = false {
+        didSet { updateAccessibilityShape() }
+    }
+
     private let shadowNode: SKShapeNode
     private let baseCircle: SKShapeNode
     private let darkEdge: SKShapeNode
     private let gradientOverlay: SKShapeNode
     private let specularHighlight: SKShapeNode
     private let secondaryHighlight: SKShapeNode
+    private var shapeOverlay: SKShapeNode?
 
     init(id: Int, color: UIColor, radius: CGFloat, isMatch: Bool) {
         self.ballId = id
@@ -326,6 +335,92 @@ class BallNode: SKNode {
         let remove = SKAction.run { completion() }
 
         run(SKAction.sequence([SKAction.group([scaleOut, fadeOut]), remove]))
+    }
+
+    // MARK: - Color-Blind Shape Overlay
+
+    /// Shapes for color-blind mode: each unique color gets a distinct geometric shape.
+    private static let shapes: [(String, (CGFloat) -> CGPath)] = [
+        ("circle", { r in CGPath(ellipseIn: CGRect(x: -r, y: -r, width: r*2, height: r*2), transform: nil) }),
+        ("triangle", { r in
+            let path = CGMutablePath()
+            path.move(to: CGPoint(x: 0, y: r))
+            path.addLine(to: CGPoint(x: -r * 0.87, y: -r * 0.5))
+            path.addLine(to: CGPoint(x: r * 0.87, y: -r * 0.5))
+            path.closeSubpath()
+            return path
+        }),
+        ("square", { r in
+            let s = r * 0.7
+            return CGPath(rect: CGRect(x: -s, y: -s, width: s*2, height: s*2), transform: nil)
+        }),
+        ("diamond", { r in
+            let path = CGMutablePath()
+            path.move(to: CGPoint(x: 0, y: r))
+            path.addLine(to: CGPoint(x: -r * 0.65, y: 0))
+            path.addLine(to: CGPoint(x: 0, y: -r))
+            path.addLine(to: CGPoint(x: r * 0.65, y: 0))
+            path.closeSubpath()
+            return path
+        }),
+        ("star", { r in
+            let path = CGMutablePath()
+            let points = 5
+            for i in 0..<(points * 2) {
+                let angle = CGFloat(i) * .pi / CGFloat(points) - .pi / 2
+                let dist = i % 2 == 0 ? r : r * 0.4
+                let pt = CGPoint(x: cos(angle) * dist, y: sin(angle) * dist)
+                if i == 0 { path.move(to: pt) } else { path.addLine(to: pt) }
+            }
+            path.closeSubpath()
+            return path
+        }),
+        ("cross", { r in
+            let path = CGMutablePath()
+            let w = r * 0.25
+            path.addRect(CGRect(x: -w, y: -r * 0.8, width: w*2, height: r*1.6))
+            path.addRect(CGRect(x: -r * 0.8, y: -w, width: r*1.6, height: w*2))
+            return path
+        }),
+        ("hexagon", { r in
+            let path = CGMutablePath()
+            for i in 0..<6 {
+                let angle = CGFloat(i) * .pi / 3.0 - .pi / 6.0
+                let pt = CGPoint(x: cos(angle) * r, y: sin(angle) * r)
+                if i == 0 { path.move(to: pt) } else { path.addLine(to: pt) }
+            }
+            path.closeSubpath()
+            return path
+        }),
+        ("pentagon", { r in
+            let path = CGMutablePath()
+            for i in 0..<5 {
+                let angle = CGFloat(i) * .pi * 2.0 / 5.0 - .pi / 2.0
+                let pt = CGPoint(x: cos(angle) * r, y: sin(angle) * r)
+                if i == 0 { path.move(to: pt) } else { path.addLine(to: pt) }
+            }
+            path.closeSubpath()
+            return path
+        }),
+    ]
+
+    private func updateAccessibilityShape() {
+        shapeOverlay?.removeFromParent()
+        shapeOverlay = nil
+
+        guard showAccessibilityShape else { return }
+
+        let idx = shapeIndex % Self.shapes.count
+        let shapeSize = radius * 0.5
+        let path = Self.shapes[idx].1(shapeSize)
+
+        let overlay = SKShapeNode(path: path)
+        overlay.fillColor = .white.withAlphaComponent(0.85)
+        overlay.strokeColor = .white
+        overlay.lineWidth = 1.5
+        overlay.zPosition = 5 // above specular highlight
+        addChild(overlay)
+        shapeOverlay = overlay
     }
 
     func hitTest(at point: CGPoint) -> Bool {

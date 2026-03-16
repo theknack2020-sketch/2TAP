@@ -19,6 +19,9 @@ class GameScene: SKScene {
     private var lastUpdateTime: TimeInterval = 0
     private var timerActive: Bool = false
 
+    /// Stored reference to the failure-handling task for cancellation.
+    private var failureTask: Task<Void, Never>?
+
     // Local timer shadow — avoids reading GameState from render thread
     private var localTimerProgress: Double = 1.0
     private var localTimerDuration: Double = 2.0
@@ -80,11 +83,16 @@ class GameScene: SKScene {
 
     // MARK: - Round Management
 
+    /// Whether to skip countdown on next startGame call (quick restart from game over).
+    var skipCountdown: Bool = false
+
     /// Start a new game from the beginning.
     func startGame() {
         guard let state = gameState else { return }
 
         // Cancel any pending actions
+        failureTask?.cancel()
+        failureTask = nil
         removeAction(forKey: "countdown")
         removeAction(forKey: "nextRound")
         timerActive = false
@@ -97,7 +105,19 @@ class GameScene: SKScene {
             state.reset()
         }
 
-        runCountdown(isFirstRound: true)
+        if skipCountdown {
+            skipCountdown = false
+            // Quick restart — skip countdown, jump straight to playing
+            Task { @MainActor in
+                state.roundNumber = 1
+                state.phase = .playing
+            }
+            localPhase = .playing
+            spawnBalls()
+            startTimer()
+        } else {
+            runCountdown(isFirstRound: true)
+        }
     }
 
     /// Start the next round with 2-1 countdown between rounds.
@@ -137,6 +157,19 @@ class GameScene: SKScene {
         )
         currentRoundColors = roundColors
 
+        // Build color → shape index mapping for accessibility
+        var colorShapeMap: [UIColor: Int] = [:]
+        var nextShapeIndex = 0
+        for color in roundColors.assignments {
+            if colorShapeMap[color] == nil {
+                colorShapeMap[color] = nextShapeIndex
+                nextShapeIndex += 1
+            }
+        }
+
+        // Check system accessibility setting
+        let useShapes = UIAccessibility.shouldDifferentiateWithoutColor
+
         var newBalls: [BallState] = []
         for (index, position) in positions.enumerated() {
             let color = roundColors.assignments[index]
@@ -154,6 +187,10 @@ class GameScene: SKScene {
             case .normal: node.speedMultiplier = 1.0
             case .insane: node.speedMultiplier = 1.6
             }
+
+            // Color-blind shape overlay
+            node.shapeIndex = colorShapeMap[color] ?? 0
+            node.showAccessibilityShape = useShapes
 
             node.position = position
             node.animateAppear(delay: Double(index) * 0.05)
@@ -264,7 +301,12 @@ class GameScene: SKScene {
 
     override func update(_ currentTime: TimeInterval) {
         // Always run ball repulsion while balls exist
-        applyBallRepulsion()
+        BallPhysicsEngine.applyRepulsion(
+            balls: ballNodes,
+            sceneSize: size,
+            hudTopInset: hudTopInset,
+            difficultyMode: gameState?.difficultyMode
+        )
 
         guard timerActive else { return }
         guard localPhase == .playing else { return }
@@ -293,126 +335,6 @@ class GameScene: SKScene {
         }
     }
 
-    // MARK: - Ball Repulsion
-
-    /// Two-layer separation: soft repulsion field + hard position correction.
-    /// Balls never touch — they repel like same-pole magnets.
-    private func applyBallRepulsion() {
-        let activeBalls = ballNodes.filter { !$0.isTapped }
-        guard activeBalls.count > 1 else { return }
-
-        let buffer: CGFloat = 14  // minimum gap between ball edges
-
-        for i in 0..<activeBalls.count {
-            for j in (i + 1)..<activeBalls.count {
-                let a = activeBalls[i]
-                let b = activeBalls[j]
-
-                let dx = b.position.x - a.position.x
-                let dy = b.position.y - a.position.y
-                let dist = sqrt(dx * dx + dy * dy)
-                guard dist > 0.01 else { continue }
-
-                let minDist = a.radius + b.radius + buffer
-                let nx = dx / dist
-                let ny = dy / dist
-
-                if dist < minDist {
-                    // HARD CORRECTION: push apart immediately so they never overlap
-                    let overlap = (minDist - dist) * 0.55 // each ball moves half
-                    a.position.x -= nx * overlap
-                    a.position.y -= ny * overlap
-                    b.position.x += nx * overlap
-                    b.position.y += ny * overlap
-
-                    // Deflect velocities apart (like a magnetic repulsion bounce)
-                    guard let bodyA = a.physicsBody, let bodyB = b.physicsBody else { continue }
-
-                    let relVx = bodyB.velocity.dx - bodyA.velocity.dx
-                    let relVy = bodyB.velocity.dy - bodyA.velocity.dy
-                    let relDotN = relVx * nx + relVy * ny
-
-                    // Only separate if they're moving toward each other
-                    if relDotN < 0 {
-                        let impulse = relDotN * 1.1 // slight extra push
-                        bodyA.velocity.dx += impulse * nx
-                        bodyA.velocity.dy += impulse * ny
-                        bodyB.velocity.dx -= impulse * nx
-                        bodyB.velocity.dy -= impulse * ny
-                    }
-                }
-
-                // SOFT FIELD: gentle push when within 2× buffer range
-                let fieldDist = a.radius + b.radius + buffer * 2.5
-                if dist < fieldDist {
-                    let strength = (fieldDist - dist) / fieldDist // 0→1 as closer
-                    let push = strength * strength * 120 // quadratic falloff
-                    a.physicsBody?.applyForce(CGVector(dx: -nx * push, dy: -ny * push))
-                    b.physicsBody?.applyForce(CGVector(dx:  nx * push, dy:  ny * push))
-                }
-            }
-        }
-
-        // Clamp max speed — scales with difficulty
-        let baseMaxSpeed: CGFloat = 55
-        let diffMultiplier: CGFloat = {
-            guard let mode = gameState?.difficultyMode else { return 1.0 }
-            switch mode {
-            case .easy:   return 0.6
-            case .normal: return 1.0
-            case .insane: return 1.6
-            }
-        }()
-        let maxSpeed = baseMaxSpeed * diffMultiplier
-
-        // Playable bounds — matches wall insets exactly
-        let wallInset: CGFloat = 40
-        let ceilingY = size.height - hudTopInset
-        let minX = wallInset
-        let maxX = size.width - wallInset
-        let minY = wallInset
-        let maxY = ceilingY
-
-        for ball in activeBalls {
-            guard let body = ball.physicsBody else { continue }
-
-            // Speed clamp
-            let speed = sqrt(body.velocity.dx * body.velocity.dx + body.velocity.dy * body.velocity.dy)
-            if speed > maxSpeed {
-                let scale = maxSpeed / speed
-                body.velocity = CGVector(dx: body.velocity.dx * scale, dy: body.velocity.dy * scale)
-            }
-
-            // Hard position clamp — if repulsion pushed a ball outside walls, snap it back
-            var pos = ball.position
-            var bounced = false
-
-            if pos.x < minX {
-                pos.x = minX
-                body.velocity.dx = abs(body.velocity.dx)
-                bounced = true
-            } else if pos.x > maxX {
-                pos.x = maxX
-                body.velocity.dx = -abs(body.velocity.dx)
-                bounced = true
-            }
-
-            if pos.y < minY {
-                pos.y = minY
-                body.velocity.dy = abs(body.velocity.dy)
-                bounced = true
-            } else if pos.y > maxY {
-                pos.y = maxY
-                body.velocity.dy = -abs(body.velocity.dy)
-                bounced = true
-            }
-
-            if bounced {
-                ball.position = pos
-            }
-        }
-    }
-
     // MARK: - Touch Handling
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -431,12 +353,7 @@ class GameScene: SKScene {
             }
         }
 
-        // Tapped empty space — that's a miss
-        handleRoundFailure()
-        Task { @MainActor in
-            HapticManager.shared.wrongTap()
-            AudioManager.shared.playWrongTap()
-        }
+        // Empty space tap — no penalty (D001: only wrong-ball taps cost lives)
     }
 
     private func handleBallTap(_ node: BallNode) {
@@ -521,8 +438,9 @@ class GameScene: SKScene {
         timerActive = false
         localPhase = .failure
         removeAction(forKey: "nextRound")
+        failureTask?.cancel()
 
-        Task { @MainActor in
+        failureTask = Task { @MainActor in
             state.phase = .failure
             state.combo = 0
             state.consecutivePerfect = 0
@@ -536,12 +454,14 @@ class GameScene: SKScene {
 
             try? await Task.sleep(for: .seconds(delay))
 
-            // Check we're still in failure phase (user might have restarted)
+            // Bail if cancelled (user restarted) or phase changed
+            guard !Task.isCancelled else { return }
             guard state.phase == .failure else { return }
 
             if livesLeft <= 0 {
                 self.clearBalls {
                     Task { @MainActor in
+                        guard !Task.isCancelled else { return }
                         state.phase = .gameOver
                         HapticManager.shared.gameOver()
                         AudioManager.shared.playGameOver()
@@ -580,6 +500,8 @@ class GameScene: SKScene {
     // MARK: - Cleanup
 
     func stopGame() {
+        failureTask?.cancel()
+        failureTask = nil
         removeAction(forKey: "countdown")
         removeAction(forKey: "nextRound")
         timerActive = false
