@@ -1,0 +1,5 @@
+/* App Display Name */
+"CFBundleDisplayName" = "2TAP";
+
+/* Tracking Usage Description */
+"NSUserTrackingUsageDescription" = "Size uygun reklamlar göstermemizi ve deneyiminizi iyileştirmemizi sağlar.";

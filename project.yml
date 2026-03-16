@@ -16,6 +16,7 @@ settings:
     INFOPLIST_KEY_UISupportedInterfaceOrientations: "UIInterfaceOrientationPortrait"
     INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown"
 
+
 targets:
   TwoTapGame:
     type: application
@@ -36,6 +37,7 @@ targets:
       path: TwoTapGame/TwoTapGame.entitlements
       properties:
         com.apple.developer.game-center: true
+        com.apple.developer.in-app-payments: true
     dependencies:
       - sdk: SpriteKit.framework
       - sdk: AVFoundation.framework
@@ -54,14 +56,29 @@ targets:
     dependencies:
       - target: TwoTapGame
 
+  TwoTapGameUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: TwoTapGameUITests
+        excludes:
+          - "**/.DS_Store"
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+    dependencies:
+      - target: TwoTapGame
+
 schemes:
   TwoTapGame:
     build:
       targets:
         TwoTapGame: all
         TwoTapGameTests: [test]
+        TwoTapGameUITests: [test]
     run:
       config: Debug
     test:
       targets:
         - TwoTapGameTests
+        - TwoTapGameUITests

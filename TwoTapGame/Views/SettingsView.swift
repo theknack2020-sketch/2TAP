@@ -7,6 +7,7 @@ struct SettingsView: View {
 
     @State private var showResetConfirm = false
     @State private var showResetFinal = false
+    @State private var showTipJar = false
 
     var body: some View {
         @Bindable var settings = settings
@@ -113,6 +114,44 @@ struct SettingsView: View {
                     Text("Records")
                 }
 
+                // MARK: - Game Center
+                Section {
+                    if GameCenterManager.shared.isAuthenticated {
+                        Label("Connected", systemImage: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                    } else {
+                        Button {
+                            GameCenterManager.shared.authenticate()
+                        } label: {
+                            Label("Sign In to Game Center", systemImage: "gamecontroller.fill")
+                        }
+                    }
+                } header: {
+                    Text("Game Center")
+                }
+
+                // MARK: - Support
+                Section {
+                    Button {
+                        showTipJar = true
+                    } label: {
+                        Label {
+                            HStack {
+                                Text("Tip Jar")
+                                Spacer()
+                                Text("❤️")
+                            }
+                        } icon: {
+                            Image(systemName: "heart.fill")
+                                .foregroundStyle(.pink)
+                        }
+                    }
+                } header: {
+                    Text("Support")
+                } footer: {
+                    Text("2TAP is free with no ads. Tips help keep it updated!")
+                }
+
                 // MARK: - About
                 Section {
                     HStack {
@@ -150,6 +189,9 @@ struct SettingsView: View {
                 }
             } message: {
                 Text("This action cannot be undone.")
+            }
+            .sheet(isPresented: $showTipJar) {
+                TipJarView()
             }
         }
     }

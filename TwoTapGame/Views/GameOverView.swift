@@ -124,6 +124,7 @@ struct GameOverView: View {
                                     )
                             )
                         }
+                        .accessibilityIdentifier("playAgainButton")
 
                         // Share button
                         Button(action: onShare) {
@@ -145,6 +146,7 @@ struct GameOverView: View {
                                     )
                             )
                         }
+                        .accessibilityIdentifier("shareButton")
 
                         // Leaderboard button
                         if GameCenterManager.shared.isAuthenticated {
@@ -205,6 +207,8 @@ struct GameOverView: View {
                 Spacer()
             }
         }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("gameOverOverlay")
         .transition(.opacity)
         .onAppear {
             withAnimation(.spring(response: 0.5, dampingFraction: 0.75)) {

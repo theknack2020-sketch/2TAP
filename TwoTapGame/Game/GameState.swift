@@ -72,7 +72,15 @@ final class GameState {
     /// Progress from 1.0 (full) to 0.0 (expired). Updated by game scene.
     var timerProgress: Double = 1.0
     var difficultyMode: DifficultyMode = .normal
-    var timerDuration: Double { difficultyMode.timerDuration }
+
+    /// Effective timer duration — tightens progressively as score increases.
+    /// Minimum is 60% of base duration so it never feels impossible.
+    var timerDuration: Double {
+        let base = difficultyMode.timerDuration
+        let reduction = Double(score) / 25000.0 // loses ~0.04s per 1000 points
+        let minDuration = base * 0.60
+        return max(minDuration, base - reduction)
+    }
 
     // MARK: - Score
 

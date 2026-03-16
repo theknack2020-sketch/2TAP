@@ -1,0 +1,8 @@
+• İlerleyen zorluk — puanın yükseldikçe zamanlayıcı kısalır
+• Şekil kaplamalı renk körü modu
+• Zorluk bazlı yüksek puanlar ve lider tabloları
+• Oyun bitişinden hızlı yeniden başlatma
+• Skor paylaşma
+• Dokunsal geri bildirim açma/kapama
+• Bahşiş Kavanozu — geliştiriciyi destekle
+• Performans ve kararlılık iyileştirmeleri

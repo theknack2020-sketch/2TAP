@@ -9,9 +9,6 @@ struct TwoTapGameApp: App {
             ContentView()
                 .environment(settings)
                 .preferredColorScheme(settings.theme.colorScheme)
-                .onAppear {
-                    GameCenterManager.shared.authenticate()
-                }
         }
     }
 }

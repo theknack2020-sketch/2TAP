@@ -1,0 +1,75 @@
+{
+  "identifier" : "8A5A2B3C-1234-5678-9ABC-DEF012345678",
+  "nonRenewingSubscriptions" : [ ],
+  "products" : [
+    {
+      "displayPrice" : "0.99",
+      "familyShareable" : false,
+      "internalID" : "tip_small_001",
+      "localizations" : [
+        {
+          "description" : "Buy the developer a coffee ☕",
+          "displayName" : "Small Tip",
+          "locale" : "en_US"
+        },
+        {
+          "description" : "Geliştiriciye bir kahve ısmarla ☕",
+          "displayName" : "Küçük Bahşiş",
+          "locale" : "tr"
+        }
+      ],
+      "productID" : "twotap.tip.small",
+      "referenceName" : "Small Tip",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "2.99",
+      "familyShareable" : false,
+      "internalID" : "tip_medium_001",
+      "localizations" : [
+        {
+          "description" : "Support the development! 🎮",
+          "displayName" : "Medium Tip",
+          "locale" : "en_US"
+        },
+        {
+          "description" : "Geliştirmeyi destekle! 🎮",
+          "displayName" : "Orta Bahşiş",
+          "locale" : "tr"
+        }
+      ],
+      "productID" : "twotap.tip.medium",
+      "referenceName" : "Medium Tip",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "4.99",
+      "familyShareable" : false,
+      "internalID" : "tip_large_001",
+      "localizations" : [
+        {
+          "description" : "You're amazing! Huge thanks! 🏆",
+          "displayName" : "Large Tip",
+          "locale" : "en_US"
+        },
+        {
+          "description" : "Sen harikasın! Çok teşekkürler! 🏆",
+          "displayName" : "Büyük Bahşiş",
+          "locale" : "tr"
+        }
+      ],
+      "productID" : "twotap.tip.large",
+      "referenceName" : "Large Tip",
+      "type" : "Consumable"
+    }
+  ],
+  "settings" : {
+    "_applicationInternalID" : "app_001",
+    "_developerTeamID" : "99H9NJ6Z6J"
+  },
+  "subscriptionGroups" : [ ],
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}

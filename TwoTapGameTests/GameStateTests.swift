@@ -254,4 +254,50 @@ final class GameStateTests: XCTestCase {
         XCTAssertNotEqual(RoundPhase.countdown(number: 2), RoundPhase.countdown(number: 1))
         XCTAssertNotEqual(RoundPhase.playing, RoundPhase.success)
     }
+
+    // MARK: - Progressive Timer
+
+    func testTimerDurationAtZeroScore() {
+        state.difficultyMode = .normal
+        state.score = 0
+        XCTAssertEqual(state.timerDuration, 2.0, accuracy: 0.001)
+    }
+
+    func testTimerDurationTightensWithScore() {
+        state.difficultyMode = .normal
+        state.score = 5000
+        // 2.0 - 5000/25000 = 2.0 - 0.2 = 1.8
+        XCTAssertEqual(state.timerDuration, 1.8, accuracy: 0.001)
+    }
+
+    func testTimerDurationHasMinimumFloor() {
+        state.difficultyMode = .normal
+        state.score = 100000 // extreme score
+        // min = 2.0 * 0.60 = 1.2
+        XCTAssertEqual(state.timerDuration, 1.2, accuracy: 0.001)
+    }
+
+    func testTimerDurationEasyMode() {
+        state.difficultyMode = .easy
+        state.score = 0
+        XCTAssertEqual(state.timerDuration, 3.0, accuracy: 0.001)
+
+        state.score = 10000
+        // 3.0 - 10000/25000 = 3.0 - 0.4 = 2.6
+        XCTAssertEqual(state.timerDuration, 2.6, accuracy: 0.001)
+    }
+
+    func testTimerDurationInsaneMode() {
+        state.difficultyMode = .insane
+        state.score = 0
+        XCTAssertEqual(state.timerDuration, 1.5, accuracy: 0.001)
+
+        state.score = 5000
+        // 1.5 - 5000/25000 = 1.5 - 0.2 = 1.3
+        XCTAssertEqual(state.timerDuration, 1.3, accuracy: 0.001)
+
+        // Floor: 1.5 * 0.60 = 0.9
+        state.score = 50000
+        XCTAssertEqual(state.timerDuration, 0.9, accuracy: 0.001)
+    }
 }

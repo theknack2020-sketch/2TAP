@@ -36,6 +36,7 @@ struct GameView: View {
             if let gameScene {
                 SpriteView(scene: gameScene, options: [.allowsTransparency])
                     .ignoresSafeArea()
+                    .accessibilityHidden(true)
             }
 
             // Frame flash
@@ -122,6 +123,8 @@ struct GameView: View {
             // Pause overlay
             if gameState.isPaused {
                 pauseOverlay
+                    .accessibilityElement(children: .contain)
+                    .accessibilityIdentifier("pauseOverlay")
             }
 
             // Game Over
@@ -229,6 +232,7 @@ struct GameView: View {
                     .font(.system(size: 18, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
                     .contentTransition(.numericText())
+                    .accessibilityIdentifier("scoreLabel")
             }
 
             // Combo badge
@@ -265,6 +269,7 @@ struct GameView: View {
                         Capsule().fill(.white.opacity(0.08))
                     )
                 }
+                .accessibilityIdentifier("pauseButton")
             }
 
             Spacer()
@@ -283,6 +288,7 @@ struct GameView: View {
                         .font(.system(size: 13))
                 }
             }
+            .accessibilityIdentifier("livesDisplay")
         }
         .animation(.easeInOut(duration: 0.2), value: gameState.combo)
     }
@@ -439,6 +445,7 @@ struct GameView: View {
                             )
                     )
                 }
+                .accessibilityIdentifier("resumeButton")
 
                 // Home button — exit to main menu
                 if let onHome {
@@ -455,6 +462,7 @@ struct GameView: View {
                         .foregroundStyle(.white.opacity(0.4))
                         .padding(.vertical, 8)
                     }
+                    .accessibilityIdentifier("homeButton")
                     .padding(.top, 8)
                 }
             }

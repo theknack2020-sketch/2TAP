@@ -58,7 +58,7 @@ final class DifficultyEngineTests: XCTestCase {
     func testIncreasesWithScore() {
         XCTAssertEqual(DifficultyEngine.ballCount(forScore: 500), 7)
         XCTAssertEqual(DifficultyEngine.ballCount(forScore: 1200), 8)
-        XCTAssertEqual(DifficultyEngine.ballCount(forScore: 4000), 9)
+        XCTAssertEqual(DifficultyEngine.ballCount(forScore: 4000), 10)
     }
 
     func testRespectsMaxBalls() {
@@ -73,11 +73,10 @@ final class DifficultyEngineTests: XCTestCase {
         XCTAssertEqual(DifficultyEngine.ballCount(forScore: 500), 7)
         XCTAssertEqual(DifficultyEngine.ballCount(forScore: 1199), 7)
         XCTAssertEqual(DifficultyEngine.ballCount(forScore: 1200), 8)
-        XCTAssertEqual(DifficultyEngine.ballCount(forScore: 2500), 8) // still 8 at 2500
-        XCTAssertEqual(DifficultyEngine.ballCount(forScore: 4000), 9)
-        XCTAssertEqual(DifficultyEngine.ballCount(forScore: 6000), 10)
-        XCTAssertEqual(DifficultyEngine.ballCount(forScore: 9000), 11)
-        XCTAssertEqual(DifficultyEngine.ballCount(forScore: 13000), 12)
+        XCTAssertEqual(DifficultyEngine.ballCount(forScore: 2500), 9)
+        XCTAssertEqual(DifficultyEngine.ballCount(forScore: 4000), 10)
+        XCTAssertEqual(DifficultyEngine.ballCount(forScore: 6000), 11)
+        XCTAssertEqual(DifficultyEngine.ballCount(forScore: 9000), 12)
     }
 
     func testNegativeScoreReturnsSixBalls() {

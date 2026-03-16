@@ -136,6 +136,7 @@ struct MainMenuView: View {
                                     .fill(selectedDifficulty == mode ? .white.opacity(0.1) : .clear)
                             )
                         }
+                        .accessibilityIdentifier("difficulty_\(mode.rawValue)")
                     }
                 }
                 .padding(.horizontal, 40)
@@ -173,6 +174,7 @@ struct MainMenuView: View {
                 .padding(.horizontal, 40)
                 .opacity(buttonsVisible ? 1 : 0)
                 .offset(y: buttonsVisible ? 0 : 20)
+                .accessibilityIdentifier("playButton")
 
                 // Secondary buttons
                 HStack(spacing: 24) {
@@ -189,6 +191,7 @@ struct MainMenuView: View {
                         .foregroundStyle(.white.opacity(0.35))
                         .frame(width: 70)
                     }
+                    .accessibilityIdentifier("settingsButton")
 
                     // Leaderboard
                     if GameCenterManager.shared.isAuthenticated {
