@@ -1,20 +1,31 @@
 # GSD State
 
-**Active Milestone:** M001 — 2TAP Audit & Improvement ✅ COMPLETE
+**Active Milestone:** M002 — App Store Ready ✅ COMPLETE
 **Active Slice:** none
 **Active Task:** none
 **Phase:** Complete
 
-## Recent Decisions
-- D001: Only penalize wrong-ball taps, not empty space
-- D002: Color-blind mode uses shape overlays (8 shapes)
-- D003: Review prompt counter persisted in UserDefaults
-- D004: Separate high scores per difficulty
-- D005: GeometryReader replaces UIScreen.main
+## What's Done
+- M001: Audit & Improvement (6 bugs, 85→90 unit tests, UX, features, code quality)
+- M002: App Store Ready (monetization, ASO, privacy, progressive difficulty, UI tests)
 
-## Blockers
-- None
+## Test Summary
+- 90 unit tests — all passing
+- 16 UI tests — all passing (full player journey, settings, difficulty modes, game over, quick restart)
+- Total: 106 tests
 
-## Milestone Summary
-All 5 slices complete. 85 tests passing. 6 bugs fixed. 4 new features added.
-2 new files extracted (BallPhysicsEngine, GameOverView). 3 async migrations done.
+## App Store Checklist
+- [x] App icon (all sizes)
+- [x] Privacy manifest (PrivacyInfo.xcprivacy)
+- [x] Privacy policy (metadata/privacy-policy.md)
+- [x] ASO metadata EN (description, keywords, subtitle, promotional text, release notes)
+- [x] ASO metadata TR (description, keywords, subtitle, promotional text, release notes)
+- [x] IAP entitlement (Tip Jar)
+- [x] StoreKit configuration file
+- [x] Game Center entitlement
+- [x] Localized InfoPlist.strings (en, tr)
+- [ ] App Store Connect: Create app listing
+- [ ] App Store Connect: Upload screenshots
+- [ ] App Store Connect: Configure IAP products
+- [ ] App Store Connect: Configure Game Center leaderboards
+- [ ] App Store Connect: Submit for review
