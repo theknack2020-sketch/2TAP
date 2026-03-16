@@ -2,330 +2,402 @@
 
 ## Active
 
-### R001 — Core Game Loop
-- Class: primary-user-loop
-- Status: active
-- Description: 2-second timer per round. Balls spawn, player taps matching-color balls within 2s. Round cycles: countdown → balls appear → player taps → result → next round.
-- Why it matters: This IS the game. Without the core loop nothing else matters.
-- Source: user
-- Primary owning slice: M001/S01
-- Supporting slices: M001/S02
-- Validation: unmapped
-- Notes: 2 seconds is the game's identity — never changes
-
-### R002 — Ball Placement Algorithm
-- Class: core-capability
-- Status: active
-- Description: Balls placed randomly on screen, non-overlapping, with at least a finger-tap gap between them. Balls fully visible, never clipped by screen edges.
-- Why it matters: Overlapping balls make the game unplayable. Tight spacing causes accidental taps.
-- Source: user
-- Primary owning slice: M001/S01
-- Supporting slices: none
-- Validation: unmapped
-- Notes: Must handle variable ball counts (5-12+)
-
-### R003 — Color Matching Logic
-- Class: core-capability
-- Status: active
-- Description: Each round has one color that appears 2 or 3 times. All other colors are unique. Max 3 of the same color per round. Only one color repeats per round.
-- Why it matters: This is the puzzle — finding the repeated color among unique ones.
-- Source: user
-- Primary owning slice: M001/S01
-- Supporting slices: none
-- Validation: unmapped
-- Notes: Never more than 3 of same color
-
-### R004 — 3D Metallic Ball Rendering
-- Class: differentiator
-- Status: active
-- Description: Balls rendered with 3D metallic/shiny appearance — highlights, shading, depth effect. Default palette is metallic/glossy.
-- Why it matters: Visual quality differentiates from simple circle-based games. "Craft feel."
-- Source: user
-- Primary owning slice: M001/S02
-- Supporting slices: none
-- Validation: unmapped
-- Notes: Multiple palette options selectable in settings
-
-### R005 — Score System with Combo Multiplier
-- Class: primary-user-loop
-- Status: active
-- Description: Base points per correct match. Consecutive correct rounds increase combo multiplier (x2, x3, x4...). One mistake resets combo to x1.
-- Why it matters: Combo creates the "one more round" tension that drives engagement.
-- Source: user
-- Primary owning slice: M001/S02
-- Supporting slices: M001/S04
-- Validation: unmapped
-- Notes: Progressive scoring — high scores should feel earned
-
-### R006 — Lives System
-- Class: core-capability
-- Status: active
-- Description: 3 lives per game. Lose a life on wrong tap or timeout. Earn +1 life every 10 consecutive perfect rounds. Game ends when all 3 lives lost.
-- Why it matters: Lives create stakes without making the game too punishing. Reward loop keeps hope alive.
-- Source: user
-- Primary owning slice: M001/S02
-- Supporting slices: none
-- Validation: unmapped
-- Notes: none
-
-### R007 — Difficulty Progression
-- Class: core-capability
-- Status: active
-- Description: Ball count increases at score thresholds (starts at 5, grows). Color similarity also increases at higher levels (harder to distinguish). 2-second timer never changes.
-- Why it matters: Without progression the game gets boring. With too much, it becomes frustrating.
-- Source: user
-- Primary owning slice: M001/S02
-- Supporting slices: none
-- Validation: unmapped
-- Notes: Ball cap determined by screen size. Timer is sacred — always 2s.
-
-### R008 — Countdown Animation
-- Class: quality-attribute
-- Status: active
-- Description: Before each round, large green "3-2-1" countdown appears center screen. After countdown, balls appear and timer starts.
-- Why it matters: Gives the player a moment to prepare. Builds anticipation rhythm.
-- Source: user
-- Primary owning slice: M001/S01
-- Supporting slices: none
-- Validation: unmapped
-- Notes: Only at game start — between rounds the cycle is immediate (toplar kaybolur → yeni toplar belirir)
-
-### R009 — Timer Bar
-- Class: core-capability
-- Status: active
-- Description: Visual countdown bar at top of screen. Drains over 2 seconds. Clear visual feedback of remaining time.
-- Why it matters: Without visual time feedback, the game feels unfair.
-- Source: user
-- Primary owning slice: M001/S01
-- Supporting slices: none
-- Validation: unmapped
-- Notes: Direction (fill vs drain) — whichever looks better visually
-
-### R010 — Frame Feedback
-- Class: quality-attribute
-- Status: active
-- Description: Screen border/frame flashes green on correct match, red on wrong/timeout. Feedback is immediate and brief.
-- Why it matters: Instant visual feedback without blocking gameplay. Player knows result without reading text.
-- Source: user
-- Primary owning slice: M001/S02
-- Supporting slices: none
-- Validation: unmapped
-- Notes: Feedback-driven, not decorative — no rainbow border effects
-
-### R011 — Main Menu
+### R001 — Fix broken App Store review prompt
 - Class: launchability
 - Status: active
-- Description: Animated, friendly background (cartoon-like, appealing to kids but not childish). Game logo/banner prominently displayed. Play button and Settings button.
-- Why it matters: First impression. Sets the tone — fun, inviting, polished.
-- Source: user
-- Primary owning slice: M001/S03
-- Supporting slices: M001/S06
-- Validation: unmapped
-- Notes: Not static/boring. Alive, warm, "sevecen" feel. English UI.
-
-### R012 — Settings Screen
-- Class: quality-attribute
-- Status: active
-- Description: Sound effects on/off, music on/off, theme selection (dark/light/system), color palette selection for balls.
-- Why it matters: Player control over experience. Accessibility (theme). Personalization (palette).
-- Source: user
-- Primary owning slice: M001/S03
+- Description: Review prompt counter must persist across sessions (currently resets every GameView creation due to @State)
+- Why it matters: App Store reviews are critical for discoverability — prompt never fires currently
+- Source: execution
+- Primary owning slice: M001/S01
 - Supporting slices: none
 - Validation: unmapped
-- Notes: Settings persist across sessions
+- Notes: Move gamesPlayed to UserDefaults via SettingsManager
 
-### R013 — Game Over Screen
-- Class: primary-user-loop
-- Status: active
-- Description: Shows score summary (final score, highest combo, rounds survived). Replay button, home button. Future slot for rewarded ad.
-- Why it matters: Closure on the session + easy path to retry.
-- Source: user
-- Primary owning slice: M001/S04
-- Supporting slices: none
-- Validation: unmapped
-- Notes: Summary should be informative but not overwhelming
-
-### R014 — Persistent High Score
-- Class: continuity
-- Status: active
-- Description: High score stored on device (UserDefaults). Double-confirm reset option in settings.
-- Why it matters: Progress persistence. Players want to beat their record.
-- Source: user
-- Primary owning slice: M001/S04
-- Supporting slices: M001/S03
-- Validation: unmapped
-- Notes: Double confirmation prevents accidental reset
-
-### R015 — Sound Effects
-- Class: quality-attribute
-- Status: active
-- Description: Cartoon-style tap sound on ball touch. Bomb/explosion sound on wrong tap or timeout.
-- Why it matters: Audio feedback reinforces the visual feedback loop. Makes the game feel alive.
-- Source: user
-- Primary owning slice: M001/S05
-- Supporting slices: none
-- Validation: unmapped
-- Notes: Sounds should be fun, not annoying. Generic/royalty-free.
-
-### R016 — Background Music
-- Class: quality-attribute
-- Status: active
-- Description: 10 royalty-free fun/energetic music loops. Plays randomly during gameplay. Toggleable in settings AND via small in-game icon.
-- Why it matters: Sets mood and energy. Optional — some players prefer silence.
-- Source: user
-- Primary owning slice: M001/S05
-- Supporting slices: none
-- Validation: unmapped
-- Notes: Must not be annoying on repeat. Variety via 10 tracks.
-
-### R017 — Pause System
+### R002 — Fix race condition in round failure handling
 - Class: core-capability
 - Status: active
-- Description: 3 pause attempts per game session. Pause button visible on game screen. Game freezes timer and hides balls on pause.
-- Why it matters: Real life interrupts. Limited pauses prevent abuse.
-- Source: user
-- Primary owning slice: M001/S02
+- Description: handleRoundFailure uses Task.sleep then checks state.phase — startGame() can be called during sleep creating a race
+- Why it matters: Can cause phantom life loss or state corruption
+- Source: execution
+- Primary owning slice: M001/S01
 - Supporting slices: none
 - Validation: unmapped
-- Notes: 3 pauses total per game, not per round
+- Notes: Use task cancellation pattern
 
-### R018 — Dark/Light/System Theme
-- Class: quality-attribute
+### R003 — Add Home button to pause screen
+- Class: primary-user-loop
 - Status: active
-- Description: App supports dark mode, light mode, and system-follow. Affects menus, settings, game background.
-- Why it matters: User preference and accessibility.
-- Source: user
-- Primary owning slice: M001/S03
+- Description: Player must be able to exit to main menu from pause screen without losing all lives
+- Why it matters: Players feel trapped — no way to exit mid-game
+- Source: inferred
+- Primary owning slice: M001/S01
 - Supporting slices: none
 - Validation: unmapped
 - Notes: none
 
-### R019 — Color Palette Selection
-- Class: differentiator
+### R004 — Soften empty-space tap penalty
+- Class: primary-user-loop
 - Status: active
-- Description: Multiple ball color palettes selectable in settings. Default is metallic/glossy. Alternatives TBD during implementation.
-- Why it matters: Personalization. Different palettes also affect difficulty perception.
+- Description: Tapping empty space between balls should not cost a life — only tapping a wrong-colored ball should penalize
+- Why it matters: Moving balls + tight spacing = many accidental "misses" that feel unfair
+- Source: inferred
+- Primary owning slice: M001/S01
+- Supporting slices: none
+- Validation: unmapped
+- Notes: Consider grace period or only penalize wrong-ball taps
+
+### R005 — Fix deprecated UIScreen.main usage
+- Class: quality-attribute
+- Status: active
+- Description: Replace UIScreen.main.bounds with GeometryReader for scene sizing
+- Why it matters: Deprecated in iOS 16, may break in future OS versions
+- Source: execution
+- Primary owning slice: M001/S01
+- Supporting slices: none
+- Validation: unmapped
+- Notes: none
+
+### R006 — Clean up dead musicEnabled code
+- Class: quality-attribute
+- Status: active
+- Description: Remove musicEnabled property and related no-op methods from AudioManager and SettingsManager
+- Why it matters: Dead code confuses future maintenance
+- Source: execution
+- Primary owning slice: M001/S01
+- Supporting slices: none
+- Validation: unmapped
+- Notes: startMusic/stopMusic/updateMusicState are all no-ops
+
+### R007 — GameState unit tests
+- Class: quality-attribute
+- Status: active
+- Description: Unit tests for reset(), markBallTapped(), allMatchesTapped, matchCount, tappedMatchCount
+- Why it matters: Central state machine with zero tests — bugs here break every game
+- Source: inferred
+- Primary owning slice: M001/S02
+- Supporting slices: none
+- Validation: unmapped
+- Notes: Pure logic, trivially testable
+
+### R008 — SettingsManager streak logic tests
+- Class: quality-attribute
+- Status: active
+- Description: Tests for recordGamePlayed(), updateStreak(), date edge cases
+- Why it matters: Date arithmetic bugs are classic — "my streak reset for no reason" App Store reviews
+- Source: inferred
+- Primary owning slice: M001/S02
+- Supporting slices: none
+- Validation: unmapped
+- Notes: Inject Date provider for testability
+
+### R009 — BallNode hit testing tests
+- Class: quality-attribute
+- Status: active
+- Description: Tests for hitTest(at:) including 44pt minimum touch target, edge cases
+- Why it matters: Determines if player taps register correctly
+- Source: inferred
+- Primary owning slice: M001/S02
+- Supporting slices: none
+- Validation: unmapped
+- Notes: none
+
+### R010 — Edge case tests for engines
+- Class: quality-attribute
+- Status: active
+- Description: Tests for zero/negative combos, boundary score thresholds, palette size validation, impossible placements
+- Why it matters: Untested edge cases silently produce wrong results
+- Source: inferred
+- Primary owning slice: M001/S02
+- Supporting slices: none
+- Validation: unmapped
+- Notes: none
+
+### R011 — Per-difficulty high scores and leaderboards
+- Class: primary-user-loop
+- Status: active
+- Description: Separate high score tracking and Game Center leaderboards for Easy, Normal, and Insane
+- Why it matters: Single leaderboard unfairly mixes difficulty levels
+- Source: user
+- Primary owning slice: M001/S03
+- Supporting slices: none
+- Validation: unmapped
+- Notes: Requires 3 leaderboard IDs in Game Center
+
+### R012 — Enlarge target color indicator
+- Class: primary-user-loop
+- Status: active
+- Description: Make the "FIND [color] ×N" indicator larger and more prominent
+- Why it matters: 22pt circle on busy screen — players miss it especially on first plays
 - Source: inferred
 - Primary owning slice: M001/S03
 - Supporting slices: none
 - Validation: unmapped
-- Notes: Palette affects ball rendering only, not UI chrome
+- Notes: none
 
-### R020 — AI Asset Generation
-- Class: differentiator
+### R013 — Smooth timer bar transitions between rounds
+- Class: quality-attribute
 - Status: active
-- Description: Game logo, app icon, menu backgrounds, and UI visual elements generated using Gemini API at build time. Logo gets special attention — multiple variations, careful prompt engineering, best one selected.
-- Why it matters: Unique, high-quality visuals without manual design. Logo is the game's identity.
-- Source: user
-- Primary owning slice: M001/S06
-- Supporting slices: M001/S03, M001/S07
-- Validation: unmapped
-- Notes: Build-time only. No runtime API calls. Game works offline.
-
-### R021 — ASO & App Store Readiness
-- Class: launchability
-- Status: active
-- Description: Complete App Store listing — optimized title, subtitle, description, keywords, screenshots, app preview metadata. ASO best practices applied.
-- Why it matters: Discoverability. A great game nobody finds is a failed game.
-- Source: user
-- Primary owning slice: M001/S07
+- Description: Timer bar should transition smoothly between rounds instead of blinking in/out
+- Why it matters: Jarring visual gap breaks immersion
+- Source: inferred
+- Primary owning slice: M001/S03
 - Supporting slices: none
 - Validation: unmapped
-- Notes: "Mükemmel şekilde hazırla" — no shortcuts on ASO
+- Notes: none
+
+### R014 — Replace magic numbers with named constants
+- Class: quality-attribute
+- Status: active
+- Description: Extract hudTopInset=160, wallInset=40, Spacer(58), timing values into named constants
+- Why it matters: Readability, maintainability, device adaptability
+- Source: execution
+- Primary owning slice: M001/S03
+- Supporting slices: M001/S05
+- Validation: unmapped
+- Notes: none
+
+### R015 — Fix device-specific layout issues
+- Class: launchability
+- Status: active
+- Description: Replace hardcoded Spacer(height:58) with safe area-aware layout that works on SE through Pro Max
+- Why it matters: Current layout breaks on different device sizes
+- Source: execution
+- Primary owning slice: M001/S03
+- Supporting slices: none
+- Validation: unmapped
+- Notes: none
+
+### R016 — Color-blind accessibility mode
+- Class: differentiator
+- Status: active
+- Description: Add shape/pattern overlays to balls so color-blind players can distinguish them. Respect system Differentiate Without Color setting.
+- Why it matters: Color-matching game is unplayable for ~8% of male players without this
+- Source: inferred
+- Primary owning slice: M001/S04
+- Supporting slices: none
+- Validation: unmapped
+- Notes: Use Apple's accessibilityDifferentiateWithoutColor API
+
+### R017 — Score sharing via share sheet
+- Class: primary-user-loop
+- Status: active
+- Description: Share score card image via iOS share sheet from game over screen
+- Why it matters: Social sharing drives organic installs
+- Source: inferred
+- Primary owning slice: M001/S04
+- Supporting slices: none
+- Validation: unmapped
+- Notes: none
+
+### R018 — Haptic feedback toggle in settings
+- Class: primary-user-loop
+- Status: active
+- Description: Add on/off toggle for haptic feedback in Settings
+- Why it matters: Some players find haptics distracting; currently no way to disable
+- Source: inferred
+- Primary owning slice: M001/S04
+- Supporting slices: none
+- Validation: unmapped
+- Notes: none
+
+### R019 — Quick restart from game over
+- Class: primary-user-loop
+- Status: active
+- Description: One-tap restart button on game over screen that skips countdown
+- Why it matters: Repeated deaths + countdown = friction that makes players quit
+- Source: inferred
+- Primary owning slice: M001/S04
+- Supporting slices: none
+- Validation: unmapped
+- Notes: none
+
+### R020 — Break up GameScene god-class
+- Class: quality-attribute
+- Status: active
+- Description: Extract timer management, touch handling, ball spawning, and physics into focused modules
+- Why it matters: 380-line class doing everything — unmaintainable
+- Source: execution
+- Primary owning slice: M001/S05
+- Supporting slices: none
+- Validation: unmapped
+- Notes: Must not change behavior — refactor only
+
+### R021 — Replace singletons with protocol-based DI
+- Class: quality-attribute
+- Status: active
+- Description: AudioManager, HapticManager, GameCenterManager should be protocol-based and injectable
+- Why it matters: Singletons block testing and make behavior unpredictable
+- Source: execution
+- Primary owning slice: M001/S05
+- Supporting slices: M001/S02
+- Validation: unmapped
+- Notes: SettingsManager already uses .environment() — extend pattern
+
+### R022 — Migrate DispatchQueue.main.asyncAfter to Task
+- Class: quality-attribute
+- Status: active
+- Description: Replace DispatchQueue.main.asyncAfter calls in SwiftUI views with Task.sleep for cancellation safety
+- Why it matters: Non-cancellable timers can fire after view dismissal
+- Source: execution
+- Primary owning slice: M001/S05
+- Supporting slices: none
+- Validation: unmapped
+- Notes: none
+
+### R023 — Reuse HapticManager generators
+- Class: quality-attribute
+- Status: active
+- Description: Create haptic generators once and reuse them instead of creating new ones per event
+- Why it matters: Apple recommends reuse for performance
+- Source: execution
+- Primary owning slice: M001/S05
+- Supporting slices: none
+- Validation: unmapped
+- Notes: none
 
 ## Deferred
 
-### R022 — Rewarded Ad Integration
-- Class: core-capability
+### R024 — Background music implementation
+- Class: differentiator
 - Status: deferred
-- Description: Rewarded video ad on game over screen — watch ad for extra life or score bonus.
-- Why it matters: Monetization path.
-- Source: user
+- Description: Implement the stubbed background music system
+- Why it matters: Adds atmosphere, but gameplay works without it
+- Source: execution
 - Primary owning slice: none
 - Supporting slices: none
 - Validation: unmapped
-- Notes: User said "daha sonra koyacağız." Game over screen leaves a slot for this.
+- Notes: Stubs exist in AudioManager — low priority vs gameplay fixes
 
-### R023 — Game Center Leaderboard
-- Class: quality-attribute
+### R025 — Localization / multi-language
+- Class: launchability
 - Status: deferred
-- Description: Global leaderboard via Game Center.
-- Why it matters: Social competition drives retention.
+- Description: Extract hardcoded English strings to Localizable.strings
+- Why it matters: Limits international reach
 - Source: inferred
 - Primary owning slice: none
 - Supporting slices: none
 - Validation: unmapped
-- Notes: Natural fit but not discussed. Defer until core game is solid.
+- Notes: English-only acceptable for initial improvement pass
+
+### R026 — Analytics / crash reporting
+- Class: operability
+- Status: deferred
+- Description: Add Firebase/Sentry for crash reporting and usage analytics
+- Why it matters: Invisible crashes and usage patterns
+- Source: inferred
+- Primary owning slice: none
+- Supporting slices: none
+- Validation: unmapped
+- Notes: Post-launch concern
+
+### R027 — Game Center achievements
+- Class: differentiator
+- Status: deferred
+- Description: Add achievements for milestones (first 100 score, 10 combo streak, etc.)
+- Why it matters: Engagement and retention driver
+- Source: inferred
+- Primary owning slice: none
+- Supporting slices: none
+- Validation: unmapped
+- Notes: Nice-to-have after core improvements
+
+### R028 — Practice / tutorial mode
+- Class: primary-user-loop
+- Status: deferred
+- Description: Slow-paced practice round for new players
+- Why it matters: Onboarding explains but doesn't let you try
+- Source: inferred
+- Primary owning slice: none
+- Supporting slices: none
+- Validation: unmapped
+- Notes: Existing onboarding is sufficient for now
+
+### R029 — Widget / Live Activity
+- Class: differentiator
+- Status: deferred
+- Description: Home screen widget showing daily streak or high score
+- Why it matters: Re-engagement surface
+- Source: inferred
+- Primary owning slice: none
+- Supporting slices: none
+- Validation: unmapped
+- Notes: Post-launch feature
 
 ## Out of Scope
 
-### R024 — Multiplayer
+### R030 — In-app purchases / monetization
 - Class: anti-feature
 - Status: out-of-scope
-- Description: No multiplayer or real-time competitive mode.
-- Why it matters: Prevents scope creep. 2TAP is a solo reflex game.
+- Description: No ads, IAP, or premium content
+- Why it matters: Not requested, would change product direction
 - Source: inferred
 - Primary owning slice: none
 - Supporting slices: none
 - Validation: n/a
-- Notes: Could be revisited in future milestones
+- Notes: Free game, no monetization
 
-### R025 — Level/Chapter System
-- Class: anti-feature
+### R031 — Multiplayer / friend challenges
+- Class: core-capability
 - Status: out-of-scope
-- Description: No discrete levels or chapters. The game is endless rounds.
-- Why it matters: User explicitly rejected level-based structure. Endless mode is the design.
-- Source: user
+- Description: No real-time or async multiplayer
+- Why it matters: Different product direction entirely
+- Source: inferred
 - Primary owning slice: none
 - Supporting slices: none
 - Validation: n/a
-- Notes: Difficulty progression serves the role levels would
+- Notes: Single-player focus
 
-### R026 — Cross-Platform
-- Class: constraint
+### R032 — CloudKit sync
+- Class: continuity
 - Status: out-of-scope
-- Description: iOS only. No Android, no web.
-- Why it matters: Focus. SwiftUI + SpriteKit is iOS-native.
-- Source: user
+- Description: No cross-device score sync
+- Why it matters: UserDefaults sufficient for current scale
+- Source: inferred
 - Primary owning slice: none
 - Supporting slices: none
 - Validation: n/a
-- Notes: none
+- Notes: Game Center handles leaderboard persistence
 
 ## Traceability
 
 | ID | Class | Status | Primary owner | Supporting | Proof |
 |---|---|---|---|---|---|
-| R001 | primary-user-loop | active | M001/S01 | M001/S02 | unmapped |
+| R001 | launchability | active | M001/S01 | none | unmapped |
 | R002 | core-capability | active | M001/S01 | none | unmapped |
-| R003 | core-capability | active | M001/S01 | none | unmapped |
-| R004 | differentiator | active | M001/S02 | none | unmapped |
-| R005 | primary-user-loop | active | M001/S02 | M001/S04 | unmapped |
-| R006 | core-capability | active | M001/S02 | none | unmapped |
-| R007 | core-capability | active | M001/S02 | none | unmapped |
-| R008 | quality-attribute | active | M001/S01 | none | unmapped |
-| R009 | core-capability | active | M001/S01 | none | unmapped |
+| R003 | primary-user-loop | active | M001/S01 | none | unmapped |
+| R004 | primary-user-loop | active | M001/S01 | none | unmapped |
+| R005 | quality-attribute | active | M001/S01 | none | unmapped |
+| R006 | quality-attribute | active | M001/S01 | none | unmapped |
+| R007 | quality-attribute | active | M001/S02 | none | unmapped |
+| R008 | quality-attribute | active | M001/S02 | none | unmapped |
+| R009 | quality-attribute | active | M001/S02 | none | unmapped |
 | R010 | quality-attribute | active | M001/S02 | none | unmapped |
-| R011 | launchability | active | M001/S03 | M001/S06 | unmapped |
-| R012 | quality-attribute | active | M001/S03 | none | unmapped |
-| R013 | primary-user-loop | active | M001/S04 | none | unmapped |
-| R014 | continuity | active | M001/S04 | M001/S03 | unmapped |
-| R015 | quality-attribute | active | M001/S05 | none | unmapped |
-| R016 | quality-attribute | active | M001/S05 | none | unmapped |
-| R017 | core-capability | active | M001/S02 | none | unmapped |
-| R018 | quality-attribute | active | M001/S03 | none | unmapped |
-| R019 | differentiator | active | M001/S03 | none | unmapped |
-| R020 | differentiator | active | M001/S06 | M001/S03, M001/S07 | unmapped |
-| R021 | launchability | active | M001/S07 | none | unmapped |
-| R022 | core-capability | deferred | none | none | unmapped |
-| R023 | quality-attribute | deferred | none | none | unmapped |
-| R024 | anti-feature | out-of-scope | none | none | n/a |
-| R025 | anti-feature | out-of-scope | none | none | n/a |
-| R026 | constraint | out-of-scope | none | none | n/a |
+| R011 | primary-user-loop | active | M001/S03 | none | unmapped |
+| R012 | primary-user-loop | active | M001/S03 | none | unmapped |
+| R013 | quality-attribute | active | M001/S03 | none | unmapped |
+| R014 | quality-attribute | active | M001/S03 | M001/S05 | unmapped |
+| R015 | launchability | active | M001/S03 | none | unmapped |
+| R016 | differentiator | active | M001/S04 | none | unmapped |
+| R017 | primary-user-loop | active | M001/S04 | none | unmapped |
+| R018 | primary-user-loop | active | M001/S04 | none | unmapped |
+| R019 | primary-user-loop | active | M001/S04 | none | unmapped |
+| R020 | quality-attribute | active | M001/S05 | none | unmapped |
+| R021 | quality-attribute | active | M001/S05 | M001/S02 | unmapped |
+| R022 | quality-attribute | active | M001/S05 | none | unmapped |
+| R023 | quality-attribute | active | M001/S05 | none | unmapped |
+| R024 | differentiator | deferred | none | none | unmapped |
+| R025 | launchability | deferred | none | none | unmapped |
+| R026 | operability | deferred | none | none | unmapped |
+| R027 | differentiator | deferred | none | none | unmapped |
+| R028 | primary-user-loop | deferred | none | none | unmapped |
+| R029 | differentiator | deferred | none | none | unmapped |
+| R030 | anti-feature | out-of-scope | none | none | n/a |
+| R031 | core-capability | out-of-scope | none | none | n/a |
+| R032 | continuity | out-of-scope | none | none | n/a |
 
 ## Coverage Summary
 
-- Active requirements: 21
-- Mapped to slices: 21
+- Active requirements: 23
+- Mapped to slices: 23
 - Validated: 0
 - Unmapped active requirements: 0

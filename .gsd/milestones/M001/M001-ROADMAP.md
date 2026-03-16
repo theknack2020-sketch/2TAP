@@ -1,93 +1,84 @@
-# M001: 2TAP Game
+# M001: 2TAP Audit & Improvement
 
-**Vision:** Build 2TAP — a fast-paced iOS reflex game where players have exactly 2 seconds to find and tap all matching-color balls. From empty project to App Store-ready, with AI-generated assets and optimized ASO.
+**Vision:** Transform 2TAP from a functional prototype into a polished, accessible, well-tested iOS game ready for App Store. Fix all known bugs, harden test coverage on critical paths, polish UX from a real player's perspective, add accessibility and social features, and clean up the codebase for maintainability.
 
 ## Success Criteria
 
-- Player can complete a full game session: menu → play → rounds → game over → replay
-- 2-second timer is precise and visually clear
-- Balls render with convincing 3D metallic appearance
-- Combo scoring and difficulty progression create engaging challenge curve
-- Sound effects and music enhance the experience without annoying
-- Settings (theme, sound, palette) persist across sessions
-- AI-generated logo and assets look polished and professional
-- App Store listing is fully optimized with keywords, description, screenshots
+- All 6 known bugs fixed and verified in simulator
+- Test count ≥60 with GameState, SettingsManager, BallNode covered
+- Game plays correctly on iPhone SE through iPhone 16 Pro Max
+- Color-blind players can play with shape overlays on balls
+- No god-classes >200 lines
+- Full game loop (menu → play → game over → restart) verified on simulator
+- Per-difficulty high scores tracked and displayed
 
 ## Key Risks / Unknowns
 
-- Ball placement at high counts — may be unsolvable with finger gaps on small screens
-- 3D metallic rendering in SpriteKit — shader complexity vs pre-rendered approach
-- Color similarity curves — making difficulty fair but challenging
-- Gemini asset quality — may need many iterations for logo
+- SpriteKit ↔ SwiftUI threading — race condition fix must not introduce new timing issues
+- GameScene refactor — 380-line class must split without behavior change
+- Color-blind shape overlays in SpriteKit — performance with 12 moving shaped balls unknown
 
 ## Proof Strategy
 
-- Ball placement unsolvable → retire in S01 by proving placement works with 12+ balls on iPhone SE screen
-- 3D rendering quality → retire in S02 by proving metallic shader/texture looks convincing on device
-- Color fairness → retire in S02 by proving difficulty curve doesn't create impossible rounds
+- Threading risk → retire in S01 by fixing race condition and verifying no phantom life loss in simulator
+- GameScene refactor risk → retire in S05 by splitting class and confirming all existing tests still pass
+- Shape overlay risk → retire in S04 by implementing and verifying 12 balls with shapes run at 60fps
 
 ## Verification Classes
 
-- Contract verification: xcodebuild build + unit tests for game logic (scoring, placement, color matching)
-- Integration verification: SwiftUI ↔ SpriteKit ↔ UserDefaults ↔ Audio all wired and working
-- Operational verification: app launches on simulator, plays end-to-end without crashes
-- UAT / human verification: visual quality of 3D balls, "feel" of gameplay, ASO quality
+- Contract verification: xcodebuild test (unit tests), build clean check
+- Integration verification: Simulator launch + gameplay verification via screenshots
+- Operational verification: App lifecycle (background/foreground), Game Center submission format
+- UAT / human verification: Visual polish, game feel, color-blind mode usability
 
 ## Milestone Definition of Done
 
 This milestone is complete only when all are true:
 
-- All 7 slice deliverables are complete
-- Game plays end-to-end: menu → countdown → rounds → game over → replay
-- Settings persist across app restarts
-- Audio plays correctly (effects + music)
-- AI-generated assets embedded and displaying
-- App Store metadata complete and optimized
-- App builds clean with no warnings
-- Success criteria re-checked against running app on simulator
+- All 6 bugs from audit are fixed and verified
+- 60+ unit tests pass
+- Game plays correctly on simulator (menu → play → game over → restart → share)
+- Color-blind mode shows shape overlays
+- Per-difficulty high scores work
+- No source file exceeds 200 lines (GameScene split)
+- All success criteria re-checked against live simulator behavior
+- Final integrated acceptance scenarios pass
 
 ## Requirement Coverage
 
-- Covers: R001, R002, R003, R004, R005, R006, R007, R008, R009, R010, R011, R012, R013, R014, R015, R016, R017, R018, R019, R020, R021
+- Covers: R001, R002, R003, R004, R005, R006, R007, R008, R009, R010, R011, R012, R013, R014, R015, R016, R017, R018, R019, R020, R021, R022, R023
 - Partially covers: none
-- Leaves for later: R022 (rewarded ads), R023 (Game Center)
+- Leaves for later: R024, R025, R026, R027, R028, R029
 - Orphan risks: none
 
 ## Slices
 
-- [x] **S01: Core Game Engine** `risk:high` `depends:[]`
-  > After this: Xcode project exists. Balls appear on screen with non-overlapping placement, 3-2-1 countdown plays, 2s timer bar counts down, tapping balls registers correctly, rounds cycle.
+- [ ] **S01: Bug Fixes & Critical UX** `risk:high` `depends:[]`
+  > After this: Game plays without race conditions or phantom life loss. Review prompt persists across sessions. Player can exit to menu from pause. Empty-space taps don't cost lives. Verified on simulator.
 
-- [x] **S02: Scoring, Lives & Game Polish** `risk:medium` `depends:[S01]`
-  > After this: Score increases with combo multiplier, 3 lives with +1 bonus every 10 perfect rounds, difficulty increases (more balls), pause system works (3 uses), frame feedback (green/red flash), 3D metallic ball rendering.
+- [ ] **S02: Test Coverage Hardening** `risk:medium` `depends:[S01]`
+  > After this: 30+ new unit tests covering GameState state machine, SettingsManager streak logic, BallNode hit testing, and engine edge cases. All 60+ tests green.
 
-- [x] **S03: Menus, Settings & Theming** `risk:medium` `depends:[S01]`
-  > After this: Main menu with animated background and logo placeholder, settings screen with sound/music/theme/palette toggles, dark/light/system theme works throughout app. Navigation between menu ↔ game ↔ settings.
+- [ ] **S03: UX Polish & Device Compatibility** `risk:medium` `depends:[S01]`
+  > After this: Per-difficulty high scores display in menu. Target color indicator is prominent. Timer transitions are smooth. Layout works correctly from iPhone SE to Pro Max. Verified via simulator screenshots on multiple devices.
 
-- [x] **S04: Game Over & Persistence** `risk:low` `depends:[S02,S03]`
-  > After this: Game over screen shows score summary (final score, best combo, rounds survived), replay and home buttons work, high score persists across app restarts, double-confirm score reset in settings.
+- [ ] **S04: Player Features** `risk:medium` `depends:[S01,S03]`
+  > After this: Color-blind mode shows shape overlays on balls. Score sharing via share sheet works. Haptic toggle in settings. Quick restart skips countdown. Verified on simulator.
 
-- [x] **S05: Audio System** `risk:low` `depends:[S01]`
-  > After this: Cartoon tap sound on ball touch, bomb sound on wrong/timeout, 10 background music loops play randomly, music toggleable in settings and via in-game icon.
-
-- [x] **S06: AI Asset Generation** `risk:medium` `depends:[S03]`
-  > After this: Gemini-generated logo (multiple variations, best selected) with special care, app icon in all sizes, menu backgrounds, all embedded in the app. Logo displayed prominently on main menu.
-
-- [x] **S07: ASO & Store Readiness** `risk:low` `depends:[S06]`
-  > After this: App Store listing fully prepared — optimized title, subtitle, keywords (100 chars used), description with hook + features, screenshots for all required sizes, privacy policy, category selection, EN + TR localization.
+- [ ] **S05: Code Quality & Maintainability** `risk:low` `depends:[S01,S02]`
+  > After this: GameScene split into focused modules (none >200 lines). Singletons replaced with protocols. DispatchQueue migrated to Task. All tests still pass after refactor.
 
 ## Boundary Map
 
 ### S01 → S02
 
 Produces:
-- `TwoTapGame/Game/GameScene.swift` → SKScene subclass with ball spawning, touch detection, round cycling
-- `TwoTapGame/Game/BallNode.swift` → SKShapeNode/SKSpriteNode subclass for individual balls
-- `TwoTapGame/Game/BallPlacementEngine.swift` → non-overlapping random placement algorithm
-- `TwoTapGame/Game/ColorMatchEngine.swift` → generates round colors (1 repeated, rest unique)
-- `TwoTapGame/Game/GameState.swift` → @Observable game state (round, timer, tapped balls)
-- `TwoTapGame/Game/TimerBar.swift` → 2-second visual countdown overlay
-- `TwoTapGame/Views/GameView.swift` → SwiftUI view wrapping SpriteView
+- Fixed `GameState` with clean phase transitions (no race conditions)
+- Fixed `SettingsManager` with `gamesPlayed` persisted in UserDefaults
+- Removed `musicEnabled` dead code from `AudioManager` and `SettingsManager`
+- `GameScene.touchesBegan` only penalizes wrong-ball taps (not empty space)
+- `GameView` uses GeometryReader instead of UIScreen.main
+- Pause overlay includes "Home" button that navigates to main menu
 
 Consumes:
 - nothing (first slice)
@@ -95,8 +86,17 @@ Consumes:
 ### S01 → S03
 
 Produces:
-- `TwoTapGame/Game/GameState.swift` → @Observable game state for SwiftUI binding
-- `TwoTapGame/Views/GameView.swift` → SwiftUI game view for navigation
+- Clean `SettingsManager` with persisted game counter
+- `GameView` with GeometryReader-based sizing (S03 builds on this for device layouts)
+
+Consumes:
+- nothing (first slice)
+
+### S01 → S04
+
+Produces:
+- Clean `GameState` phase transitions (S04 adds quick restart path)
+- Clean `SettingsManager` (S04 adds haptic toggle property)
 
 Consumes:
 - nothing (first slice)
@@ -104,62 +104,29 @@ Consumes:
 ### S01 → S05
 
 Produces:
-- `TwoTapGame/Game/GameScene.swift` → touch events and round results that trigger sounds
+- Fixed `GameScene` with correct touch handling and phase management
+- All bug fixes in place so refactor doesn't need to work around bugs
 
 Consumes:
 - nothing (first slice)
 
-### S02 → S04
+### S02 → S05
 
 Produces:
-- `TwoTapGame/Game/GameState.swift` (extended) → score, combo, lives, rounds survived, isGameOver
-- `TwoTapGame/Game/ScoreEngine.swift` → combo multiplier logic, score calculation
-- `TwoTapGame/Game/DifficultyEngine.swift` → ball count thresholds, color similarity curves
+- Comprehensive test suite that serves as regression safety net for refactoring
+- Tests for GameState, SettingsManager, BallNode, engine edge cases
 
 Consumes from S01:
-- `GameScene.swift` → base game loop to add scoring/lives hooks
-- `GameState.swift` → base state to extend with score/lives fields
-- `ColorMatchEngine.swift` → color generation to add similarity difficulty
+- Fixed GameState (tests validate the fixed behavior)
+- Fixed SettingsManager (tests validate persisted gamesPlayed)
 
 ### S03 → S04
 
 Produces:
-- `TwoTapGame/Views/MainMenuView.swift` → home navigation target
-- `TwoTapGame/Models/SettingsManager.swift` → @Observable settings with UserDefaults persistence
-- `TwoTapGame/App/AppTheme.swift` → theme definitions for consistent styling
+- Per-difficulty high score infrastructure in SettingsManager
+- Enlarged target color indicator (S04 adds color-blind shape overlay nearby)
+- Device-adaptive layout (S04 features must work across devices)
 
 Consumes from S01:
-- `GameView.swift` → navigation target from menu
-
-### S03 → S06
-
-Produces:
-- `TwoTapGame/Views/MainMenuView.swift` → has Image placeholder for logo asset
-- `TwoTapGame/Resources/Assets.xcassets/` → asset catalog structure
-
-Consumes from S01:
-- `GameView.swift` → navigation integration
-
-### S04 → S07
-
-Produces:
-- Complete running app — all screens, all mechanics, all navigation
-
-Consumes from S02:
-- `GameState.swift` → final score, combo, rounds for game over display
-- `ScoreEngine.swift` → score formatting
-
-Consumes from S03:
-- `MainMenuView.swift` → home navigation from game over
-- `SettingsManager.swift` → high score storage, reset functionality
-
-### S06 → S07
-
-Produces:
-- `TwoTapGame/Resources/Assets.xcassets/AppIcon.appiconset/` → app icon in all sizes
-- `TwoTapGame/Resources/Assets.xcassets/logo.imageset/` → game logo
-- `TwoTapGame/Resources/Assets.xcassets/menu-bg.imageset/` → menu background
-
-Consumes from S03:
-- Asset catalog structure
-- Main menu view (to embed logo and background)
+- GeometryReader-based GameView sizing
+- Clean SettingsManager

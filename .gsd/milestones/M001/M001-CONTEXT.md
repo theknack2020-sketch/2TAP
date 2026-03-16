@@ -1,121 +1,119 @@
-# M001: 2TAP Game — Context
+# M001: 2TAP Audit & Improvement — Context
 
-**Gathered:** 2026-03-14
+**Gathered:** 2026-03-16
 **Status:** Ready for planning
 
 ## Project Description
 
-2TAP is a fast-paced iOS reflex/perception game. The name comes from "2 seconds" — the player always has exactly 2 seconds per round, no exceptions. Each round, colored 3D metallic balls appear on screen. One color is repeated (2 or 3 times), the rest are unique. The player must find and tap all matching-color balls within 2 seconds. Endless rounds, increasing difficulty, combo scoring. The game targets both kids (friendly, cartoon-like feel — "sevecen") and adults.
+2TAP is a SpriteKit + SwiftUI iOS color-matching reflex game. Balls bounce around, 3 share the same color, player taps them before time runs out. Three difficulty modes. Game Center leaderboard. FM synthesis audio. The game works but needs bug fixes, test hardening, UX polish, accessibility, and code cleanup.
 
 ## Why This Milestone
 
-This is the entire game — from empty directory to App Store-ready product. One milestone because the scope is well-defined: single-screen game loop, settings, audio, AI assets, and ASO.
+The game is functional but has real bugs (race conditions, broken review prompt), harsh UX that punishes casual players, zero tests on critical state machine code, no accessibility support for a color-matching game, and a god-class that's hard to maintain. This is the "make it right" pass before any App Store push.
 
 ## User-Visible Outcome
 
 ### When this milestone is complete, the user can:
 
-- Open the app, see an animated main menu, tap Play, and play 2TAP end-to-end
-- Adjust settings (sound, music, theme, color palette), have them persist
-- See their high score, try to beat it
-- Submit the app to App Store with fully optimized ASO
+- Play a bug-free game with fair mechanics (no phantom life loss, no trapped-in-game feeling)
+- Color-blind players can play with shape overlays on balls
+- Share scores via iOS share sheet
+- See per-difficulty high scores and leaderboards
+- Quickly restart after game over without countdown delay
 
 ### Entry point / environment
 
 - Entry point: iOS app launch
-- Environment: iPhone (iOS 17+), simulator for development
-- Live dependencies involved: none (fully offline game, Gemini API used only at build time for asset generation)
+- Environment: iOS 17+ Simulator and device
+- Live dependencies involved: Game Center (leaderboard)
 
 ## Completion Class
 
-- Contract complete means: all game mechanics work correctly — scoring, lives, combos, difficulty progression, timer, pause
-- Integration complete means: SwiftUI menus ↔ SpriteKit game scene ↔ UserDefaults persistence ↔ audio system all wired together
-- Operational complete means: app builds, runs on simulator, all assets generated and embedded, ASO metadata ready
+- Contract complete means: All 30+ existing tests pass, 30+ new tests pass, build clean
+- Integration complete means: Game plays correctly on simulator, Game Center submits scores
+- Operational complete means: App launches, plays, and recovers correctly across app lifecycle
 
 ## Final Integrated Acceptance
 
 To call this milestone complete, we must prove:
 
-- Full game session: menu → play → survive multiple rounds → game over → see score → replay
-- Settings changes persist across app restarts (theme, sound, high score)
-- AI-generated assets (logo, icon, backgrounds) are embedded and display correctly
-- App Store listing metadata is complete and optimized
+- Full game loop (launch → menu → play → game over → restart) works without bugs on iPhone 16 Pro simulator
+- Color-blind mode activates and shows shape overlays on balls
+- Score sharing produces a share sheet with score card
+- Per-difficulty high scores display correctly in menu and settings
+- All tests pass (target: 60+)
 
 ## Risks and Unknowns
 
-- **Ball placement algorithm** — ensuring non-overlapping placement with finger gaps at higher ball counts (10+). Could hit performance or unsolvable placement scenarios. Risk: medium.
-- **3D metallic ball rendering in SpriteKit** — achieving convincing 3D look with shaders or pre-rendered textures. Risk: medium.
-- **Gemini API asset quality** — generated assets may need multiple iterations for acceptable quality. Logo especially needs careful prompt engineering. Risk: medium.
-- **Color similarity for difficulty** — generating colors that are "similar but distinguishable" at higher difficulties without being unfair. Risk: low-medium.
+- SpriteKit ↔ SwiftUI threading — race condition fix must not introduce new timing issues
+- GameScene refactor — behavior must be identical after splitting into modules
+- Color-blind shape overlays in SpriteKit — need to verify SKShapeNode performance with many balls
+- Per-difficulty leaderboards — requires Game Center dashboard configuration (can only verify format, not actual submission without real account)
 
 ## Existing Codebase / Prior Art
 
-- Empty project — no existing code
-- Skills available: `ios-factory` (end-to-end iOS production), `swiftui` (SwiftUI patterns)
-- Gemini icon generation script: `~/.gsd/agent/skills/ios-factory/references/app-icon-generator.md`
-- ASO guide: `~/.gsd/agent/skills/ios-factory/references/aso-guide.md`
+- `Game/GameScene.swift` — 380-line god-class, core game loop. Every change flows through here.
+- `Game/GameState.swift` — @Observable state bridge between SpriteKit and SwiftUI. Zero tests.
+- `Game/ScoreEngine.swift` — Pure static scoring logic. Well-tested.
+- `Game/BallPlacementEngine.swift` — Non-overlapping position generation. Well-tested.
+- `Game/ColorMatchEngine.swift` — Color assignment per round. Well-tested.
+- `Game/DifficultyEngine.swift` — Score-based difficulty progression. Well-tested.
+- `Game/BallNode.swift` — SpriteKit ball with 3D metallic appearance + physics. Untested hitTest.
+- `Game/AudioManager.swift` — FM synthesis. Has dead musicEnabled code.
+- `Game/HapticManager.swift` — Creates new generators per call (should reuse).
+- `Models/SettingsManager.swift` — UserDefaults persistence + streak logic. Untested date math.
+- `Views/GameView.swift` — 435 lines, largest view. HUD + game over + score popups.
+- `Views/MainMenuView.swift` — Animated menu with difficulty selector.
+- `Views/SettingsView.swift` — Sound, theme, palette settings.
+- `project.yml` — XcodeGen config. iOS 17+, Swift 5.9, SpriteKit + AVFoundation + GameKit.
 
-> See `.gsd/DECISIONS.md` for all architectural and pattern decisions — it is an append-only register; read it during planning, append to it during execution.
+> See `.gsd/DECISIONS.md` for all architectural and pattern decisions.
 
 ## Relevant Requirements
 
-- R001-R003 — Core game loop, ball placement, color matching (S01)
-- R004-R007, R010, R017 — Scoring, lives, difficulty, frame feedback, pause (S02)
-- R011-R012, R018-R019 — Menus, settings, theming, palettes (S03)
-- R013-R014 — Game over, persistent score (S04)
-- R015-R016 — Sound effects, background music (S05)
-- R020 — AI asset generation with Gemini (S06)
-- R021 — ASO & App Store readiness (S07)
+- R001-R006 — Bug fixes (S01)
+- R007-R010 — Test coverage (S02)
+- R011-R015 — UX polish (S03)
+- R016-R019 — Player features (S04)
+- R020-R023 — Code quality (S05)
 
 ## Scope
 
 ### In Scope
 
-- Complete game with all mechanics (timer, balls, scoring, lives, combos, difficulty, pause)
-- Main menu, settings, game over screens
-- Dark/light/system theme support
-- Multiple color palettes
-- Sound effects and 10 background music loops
-- AI-generated assets (logo with extra care, app icon, backgrounds)
-- Full ASO optimization
-- Xcode project setup, build, simulator testing
+- Fix all identified bugs
+- Add unit tests for untested critical paths
+- UX improvements from player perspective
+- Color-blind accessibility
+- Score sharing
+- Per-difficulty tracking
+- Code quality refactoring
+- Simulator-based visual verification
 
 ### Out of Scope / Non-Goals
 
+- Monetization (IAP, ads)
 - Multiplayer
-- Level/chapter system (it's endless rounds)
-- Cross-platform (iOS only)
-- Rewarded ads (deferred — slot prepared)
-- Game Center leaderboard (deferred)
-- Real device testing (simulator only in this milestone)
+- CloudKit sync
+- Background music (deferred)
+- Localization (deferred)
+- Analytics (deferred)
 
 ## Technical Constraints
 
-- iOS 17+ minimum (for @Observable, modern SwiftUI APIs)
-- SwiftUI for all non-gameplay UI
-- SpriteKit for game scene (embedded via SpriteView)
-- UserDefaults for persistence (no SwiftData needed — just scores and settings)
-- Gemini API at build time only — game works fully offline
-- GEMINI_API_KEY required for asset generation phase
+- iOS 17+ minimum (uses @Observable)
+- Swift 5.9
+- XcodeGen for project generation (must run `xcodegen generate` after adding files)
+- SpriteKit main thread constraint — GameScene.update() runs on main thread via SpriteView
+- Game Center requires entitlement and real developer account for full testing
 
 ## Integration Points
 
-- **SwiftUI ↔ SpriteKit** — SpriteView embedding, state passing via @Observable game manager
-- **Game Manager ↔ UserDefaults** — high score, settings persistence
-- **Audio Manager ↔ AVFoundation** — background music loops, sound effects
-- **Gemini API** — build-time asset generation (logo, icon, backgrounds)
+- Game Center — leaderboard submission, per-difficulty IDs needed
+- AVFoundation — FM synthesis audio engine
+- UIKit haptics — UIImpactFeedbackGenerator, UINotificationFeedbackGenerator
 
 ## Open Questions
 
-- Exact ball count cap — need to test on smallest iPhone screen with finger gaps. Will determine during S01.
-- Color palette alternatives beyond metallic — will design 2-3 options during S03.
-- Background music sourcing — 10 royalty-free loops. Will use bundled/generated assets.
-
-## Key User Terminology (preserve exactly)
-
-- "sevecen" — warm, friendly, lovable feel for the UI/backgrounds
-- "craft feel" implied — metallic 3D balls, not flat circles
-- "2 saniye" — sacred, never changes, it's the game's identity
-- "karmaşık renkler" — complex/rich colors, not primary-only
-- "çizgi film sesi" — cartoon-like sound effects
-- "mükemmel şekilde" — ASO must be thorough, no shortcuts
+- Empty-tap handling: remove penalty entirely, or only penalize wrong-ball taps? — leaning toward only wrong-ball penalty
+- Color-blind mode: shapes on balls (triangle, square, circle, star) or patterns (stripes, dots)? — leaning toward shapes for clarity at speed

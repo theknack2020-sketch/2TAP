@@ -2,28 +2,33 @@
 
 ## What This Is
 
-2TAP is an iOS game built with SwiftUI + SpriteKit. A fast-paced perception/reflex game where players have exactly 2 seconds to identify and tap all balls of the matching color. Endless rounds, increasing difficulty, combo scoring.
+2TAP — iOS SpriteKit + SwiftUI color-matching reflex game. Balls bounce around the screen, 3 share the same color, player must find and tap all 3 before time runs out. Three difficulty modes (Easy 3s, Normal 2s, Insane 1.5s). Game Center leaderboard. FM synthesis audio with no asset files.
 
 ## Core Value
 
-The 2-second core loop: balls appear → find the matching color → tap them all before time runs out. Everything else supports this tension.
+Fast, addictive color-matching gameplay that's accessible to all players and feels polished enough for App Store.
 
 ## Current State
 
-Empty project. No code, no assets, no Xcode project yet. `IOS/2TAP/` directory created.
+- 21 source files, ~4,600 lines Swift
+- 30 unit tests passing, ~21% file coverage
+- Builds clean on iOS 17+ (XcodeGen)
+- Core gameplay loop works but has bugs (race condition, broken review prompt)
+- UX gaps: harsh empty-tap penalty, no mid-game exit, no color-blind support
+- Code quality: GameScene god-class, 4 singletons, magic numbers
 
 ## Architecture / Key Patterns
 
-- **SwiftUI** — all non-gameplay UI (menus, settings, game over, HUD overlays)
-- **SpriteKit** — game scene (ball rendering, touch detection, timer, animations) embedded via `SpriteView`
-- **UserDefaults** — persistent high score and settings
-- **Gemini API (build time)** — AI-generated assets (logo, app icon, backgrounds, UI elements)
-- Target: iOS 17+, iPhone
+- SpriteKit GameScene ↔ @Observable GameState ↔ SwiftUI HUD
+- Static engine structs for pure game logic (Score, Difficulty, ColorMatch, BallPlacement)
+- SettingsManager singleton with UserDefaults persistence
+- XcodeGen (project.yml) for project generation
+- iOS 17+ @Observable (not Combine)
 
 ## Capability Contract
 
-See `.gsd/REQUIREMENTS.md` for the explicit capability contract, requirement status, and coverage mapping.
+See `.gsd/REQUIREMENTS.md` for the explicit capability contract.
 
 ## Milestone Sequence
 
-- [ ] M001: 2TAP Game — Full game from menu to App Store readiness
+- [ ] M001: Audit & Improvement — Fix bugs, harden tests, polish UX, add player features, clean up code
