@@ -1,31 +1,27 @@
 # GSD State
 
-**Active Milestone:** M002 — App Store Ready ✅ COMPLETE
-**Active Slice:** none
-**Active Task:** none
-**Phase:** Complete
+**Phase:** App Store Connect — Build uploaded, metadata set
 
-## What's Done
-- M001: Audit & Improvement (6 bugs, 85→90 unit tests, UX, features, code quality)
-- M002: App Store Ready (monetization, ASO, privacy, progressive difficulty, UI tests)
-
-## Test Summary
-- 90 unit tests — all passing
-- 16 UI tests — all passing (full player journey, settings, difficulty modes, game over, quick restart)
-- Total: 106 tests
-
-## App Store Checklist
-- [x] App icon (all sizes)
+## What's Complete
+- [x] All bugs fixed (M001)
+- [x] 106 tests (90 unit + 16 UI), all passing
+- [x] Game Center — optional, user-initiated from Settings
+- [x] Tip Jar IAP (StoreKit 2)
+- [x] Progressive difficulty (timer shrinks with score)
+- [x] ASO metadata uploaded (EN + TR)
+- [x] Privacy policy live: https://theknack2020-sketch.github.io/2TAP/privacy.html
+- [x] Support page live: https://theknack2020-sketch.github.io/2TAP/support.html
 - [x] Privacy manifest (PrivacyInfo.xcprivacy)
-- [x] Privacy policy (metadata/privacy-policy.md)
-- [x] ASO metadata EN (description, keywords, subtitle, promotional text, release notes)
-- [x] ASO metadata TR (description, keywords, subtitle, promotional text, release notes)
-- [x] IAP entitlement (Tip Jar)
-- [x] StoreKit configuration file
-- [x] Game Center entitlement
-- [x] Localized InfoPlist.strings (en, tr)
-- [ ] App Store Connect: Create app listing
-- [ ] App Store Connect: Upload screenshots
-- [ ] App Store Connect: Configure IAP products
-- [ ] App Store Connect: Configure Game Center leaderboards
-- [ ] App Store Connect: Submit for review
+- [x] Build v1.0.0 (1) uploaded to App Store Connect
+- [x] Review contact info set
+- [x] Screenshots captured (6.7" + 6.5")
+- [x] GitHub repo updated
+
+## App Store Connect — Remaining Manual Steps
+- [ ] Select build in App Store version
+- [ ] Upload screenshots via App Store Connect UI (or fastlane screenshots)
+- [ ] Set age rating
+- [ ] Set pricing (Free)
+- [ ] Configure Game Center leaderboards (4 IDs)
+- [ ] Configure IAP products (3 tips) 
+- [ ] Submit for review
