@@ -35,7 +35,8 @@ targets:
         INFOPLIST_KEY_CFBundleDisplayName: "2TAP"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         MARKETING_VERSION: "1.0.0"
-        CURRENT_PROJECT_VERSION: "1"
+        CURRENT_PROJECT_VERSION: "2"
+        INFOPLIST_KEY_NSUserTrackingUsageDescription: "This app does not track you. This message is required by a system framework."
     entitlements:
       path: TwoTapGame/TwoTapGame.entitlements
       properties:
