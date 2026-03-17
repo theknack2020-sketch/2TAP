@@ -41,3 +41,5 @@ Pods/
 fastlane/AuthKey*.p8
 .env
 build/
+fastlane/api_key.json
+fastlane/report.xml

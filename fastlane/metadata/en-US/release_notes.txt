@@ -1,0 +1,8 @@
+• Progressive difficulty — timer tightens as your score climbs
+• Color-blind mode with shape overlays
+• Per-difficulty high scores and leaderboards
+• Quick restart from game over
+• Score sharing
+• Haptic feedback toggle
+• Tip Jar — support the developer
+• Performance and stability improvements

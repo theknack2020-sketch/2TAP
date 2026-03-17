@@ -44,4 +44,4 @@ We may update this Privacy Policy. Changes will be reflected in the "Last Update
 
 ## Contact
 
-For questions about this policy, contact: support@theknack.dev
+For questions about this policy, contact: theknack2020@gmail.com
