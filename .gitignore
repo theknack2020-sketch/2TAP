@@ -38,3 +38,6 @@ Pods/
 # Misc
 *.swp
 *~
+fastlane/AuthKey*.p8
+.env
+build/

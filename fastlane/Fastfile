@@ -1,0 +1,105 @@
+default_platform(:ios)
+
+platform :ios do
+
+  def api_key
+    app_store_connect_api_key(
+      key_id: "4JLWR7B5T4",
+      issuer_id: "0d7cd2d5-68c7-4214-854f-26b663d40beb",
+      key_filepath: "./fastlane/AuthKey_4JLWR7B5T4.p8"
+    )
+  end
+
+  desc "Create the app on App Store Connect"
+  lane :create_app do
+    produce(
+      app_identifier: "com.ufuk.twotapgame",
+      app_name: "2TAP - Color Reflex Game",
+      language: "en-US",
+      app_version: "1.0.0",
+      sku: "twotap2026",
+      team_id: "99H9NJ6Z6J",
+      enable_services: {
+        game_center: "on",
+        in_app_purchase: "on"
+      }
+    )
+  end
+
+  desc "Upload metadata and screenshots only"
+  lane :metadata do
+    deliver(
+      api_key: api_key,
+      app_version: "1.0.0",
+      skip_binary_upload: true,
+      skip_screenshots: true,
+      force: true,
+      submit_for_review: false,
+      precheck_include_in_app_purchases: false,
+      run_precheck_before_submit: false
+    )
+  end
+
+  desc "Upload screenshots only"
+  lane :screenshots do
+    deliver(
+      api_key: api_key,
+      app_version: "1.0.0",
+      skip_binary_upload: true,
+      skip_metadata: true,
+      skip_screenshots: false,
+      force: true,
+      submit_for_review: false,
+      overwrite_screenshots: true,
+      precheck_include_in_app_purchases: false,
+      run_precheck_before_submit: false
+    )
+  end
+
+  desc "Build and upload to App Store Connect"
+  lane :release do
+    build_app(
+      project: "TwoTapGame.xcodeproj",
+      scheme: "TwoTapGame",
+      export_method: "app-store",
+      clean: true,
+      output_directory: "./build",
+      output_name: "TwoTapGame.ipa",
+      export_options: {
+        signingStyle: "automatic",
+        teamID: "99H9NJ6Z6J"
+      }
+    )
+
+    upload_to_app_store(
+      api_key: api_key,
+      skip_metadata: false,
+      skip_screenshots: false,
+      force: true,
+      submit_for_review: false,
+      automatic_release: false,
+      precheck_include_in_app_purchases: false
+    )
+  end
+
+  desc "Build and upload to TestFlight"
+  lane :beta do
+    build_app(
+      project: "TwoTapGame.xcodeproj",
+      scheme: "TwoTapGame",
+      export_method: "app-store",
+      clean: true,
+      output_directory: "./build",
+      output_name: "TwoTapGame.ipa",
+      export_options: {
+        signingStyle: "automatic",
+        teamID: "99H9NJ6Z6J"
+      }
+    )
+
+    upload_to_testflight(
+      api_key: api_key,
+      skip_waiting_for_build_processing: true
+    )
+  end
+end

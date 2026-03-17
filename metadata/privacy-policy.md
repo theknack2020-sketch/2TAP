@@ -4,7 +4,7 @@
 
 ## Overview
 
-2TAP ("the App") is developed by Ufuk ("we", "us"). We respect your privacy and are committed to protecting your personal data.
+2TAP ("the App") is developed by theknack ("we", "us"). We respect your privacy and are committed to protecting your personal data.
 
 ## Data Collection
 
@@ -44,4 +44,4 @@ We may update this Privacy Policy. Changes will be reflected in the "Last Update
 
 ## Contact
 
-For questions about this policy, contact: ufuk@theknack.dev
+For questions about this policy, contact: support@theknack.dev
